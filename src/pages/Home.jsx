@@ -1,61 +1,71 @@
-import { Area, Field, FieldRow, PageHeader, Section } from '../components/ui'
+import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import ConfidentialityNotice from '../components/ConfidentialityNotice'
-import { useLocalStorage } from '../lib/useLocalStorage'
-import { GROUP_NAME } from '../data/group'
+
+const purposeItems = [
+  'Document our clinical exposure and learning experiences.',
+  'Record important cases encountered during rotations.',
+  'Reflect on our strengths, challenges, and areas for improvement.',
+  'Demonstrate the development of our clinical reasoning and professional skills.',
+  'Promote collaborative learning through shared reflections and discussions.',
+  'Monitor our progress toward achieving the objectives of each clinical rotation.',
+]
 
 export default function Home() {
-  const [site, setSite] = useLocalStorage('home.site', '')
-  const [term, setTerm] = useLocalStorage('home.term', '')
-  const [intro, setIntro] = useLocalStorage('home.intro', '')
-  const [purpose, setPurpose] = useLocalStorage('home.purpose', '')
+  const { record, status } = useSupabaseRecord('group_metadata', 1)
+  const groupLabel =
+    status === 'loading' ? 'Group …' : record.group_name ? `Group ${record.group_name}` : 'Group [EDIT ME]'
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Group Online Clinical Portfolio"
-        title="Home"
-        description="This portfolio documents the rotation activity, case findings, and reflections of the group below, submitted as their clinical rotation deliverable."
-      />
+      <div className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-2">
+          Clinical Rotation Portfolio
+        </p>
+        <h1 className="text-2xl sm:text-3xl font-semibold text-ink-900 tracking-tight">
+          Welcome to the Clinical Rotation Portfolio of {groupLabel}
+        </h1>
+        <p className="mt-2 text-[15px] text-ink-500">
+          University of Southern Mindanao – College of Medicine
+        </p>
+      </div>
 
       <div className="space-y-6">
-        <Section>
-          <FieldRow cols={3}>
-            <div>
-              <span className="field-label">Group</span>
-              <div className="field-input bg-ink-50 text-ink-800 font-medium">{GROUP_NAME}</div>
-            </div>
-            <Field
-              label="Academic Year / Term"
-              placeholder="e.g., A.Y. 2026–2027, Term 2"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-            />
-            <Field
-              label="Rotation Site / Institution"
-              placeholder="e.g., Name of affiliated hospital or community site"
-              value={site}
-              onChange={(e) => setSite(e.target.value)}
-            />
-          </FieldRow>
-        </Section>
+        <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-8 space-y-4">
+          <p className="text-[15px] leading-relaxed text-ink-700">
+            This portfolio documents our learning journey throughout our clinical rotations as
+            junior medical students. It showcases our clinical experiences, patient encounters,
+            case discussions, reflections, and the knowledge and skills we developed across
+            different departments, including Internal Medicine, Surgery, Pediatrics, Obstetrics
+            and Gynecology, and Family and Community Medicine.
+          </p>
+          <p className="text-[15px] leading-relaxed text-ink-700">
+            As a team, we are committed to lifelong learning, professionalism, ethical patient
+            care, teamwork, and evidence-based clinical practice. Through this portfolio, we aim
+            to demonstrate our growth in clinical reasoning, communication, and patient-centered
+            care while preparing for the responsibilities of clerkship and future medical
+            practice.
+          </p>
+        </div>
 
-        <Section title="About Our Group" subtitle="Introduce the group — who you are and where you rotated.">
-          <Area
-            placeholder="Introduce the group: rotation cycle, sites and departments covered, and any relevant background context for readers of this portfolio."
-            value={intro}
-            onChange={(e) => setIntro(e.target.value)}
-            minRows={4}
-          />
-        </Section>
-
-        <Section title="Purpose of This Portfolio" subtitle="Explain what this portfolio is meant to demonstrate.">
-          <Area
-            placeholder="Describe the purpose of this portfolio — e.g., to document clinical findings from the rotation activity, consolidate case learning, demonstrate growth in clinical reasoning, and prepare the group for clerkship."
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-            minRows={4}
-          />
-        </Section>
+        <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-8">
+          <h2 className="text-base font-semibold text-ink-900 mb-3">Purpose of the Portfolio</h2>
+          <p className="text-[15px] leading-relaxed text-ink-700 mb-4">
+            This online portfolio serves as a comprehensive record of our clinical education and
+            experiences during the rotation. It is designed to:
+          </p>
+          <ul className="space-y-2">
+            {purposeItems.map((item) => (
+              <li key={item} className="flex gap-2.5 text-[15px] leading-relaxed text-ink-700">
+                <span className="text-brand-600 mt-1.5 w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[15px] leading-relaxed text-ink-700 mt-5">
+            We hope this portfolio reflects not only the knowledge we have gained but also our
+            commitment to compassionate, ethical, and patient-centered medical practice.
+          </p>
+        </div>
 
         <ConfidentialityNotice />
       </div>

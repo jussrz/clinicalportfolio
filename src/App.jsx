@@ -10,7 +10,6 @@ import ClinicalSkills from './pages/ClinicalSkills'
 import FeedbackActionPlan from './pages/FeedbackActionPlan'
 import IndividualContribution from './pages/IndividualContribution'
 import GroupReflections from './pages/GroupReflections'
-import Confidentiality from './pages/Confidentiality'
 
 function App() {
   return (
@@ -25,9 +24,8 @@ function App() {
           <Route path="case-presentation" element={<CasePresentation />} />
           <Route path="clinical-skills" element={<ClinicalSkills />} />
           <Route path="feedback-action-plan" element={<FeedbackActionPlan />} />
-          <Route path="individual-contributions" element={<IndividualContribution />} />
+          <Route path="individual-contribution" element={<IndividualContribution />} />
           <Route path="group-reflections" element={<GroupReflections />} />
-          <Route path="confidentiality" element={<Confidentiality />} />
         </Route>
       </Routes>
     </BrowserRouter>

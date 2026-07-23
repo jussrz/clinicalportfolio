@@ -1,67 +1,42 @@
-import { Area, PageHeader, Section } from '../components/ui'
-import { DataTable } from '../components/DataTable'
-import { useLocalStorage } from '../lib/useLocalStorage'
-
-const confidenceOptions = [
-  'Not yet exposed',
-  'Observed only',
-  'Assisted',
-  'Performed with supervision',
-  'Confident / independent',
-]
-
-const starterSkills = [
-  'History-taking',
-  'Physical examination',
-  'Vital signs monitoring',
-  'Wound care / dressing',
-  'IV line insertion',
-  'NGT insertion',
-  'Urinary catheterization',
-  'Suturing',
-  'Assisting normal spontaneous delivery',
-  'Basic life support',
-]
-
-const columns = [
-  { key: 'skill', label: 'Clinical Skill', width: '35%', placeholder: 'e.g., History-taking' },
-  { key: 'confidence', label: 'Group Confidence Level', width: '30%', type: 'select', options: confidenceOptions, placeholder: 'Select level' },
-  { key: 'notes', label: 'Notes', width: '35%', placeholder: 'Context, department, or specifics' },
-]
+import { Area, LoadState, PageHeader, SaveStatus, Section } from '../components/ui'
+import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 
 export default function ClinicalSkills() {
-  const [rows, setRows] = useLocalStorage('skills.rows', starterSkills.map((skill) => ({ id: crypto.randomUUID(), skill, confidence: '', notes: '' })))
-  const [confident, setConfident] = useLocalStorage('skills.confident', '')
-  const [needsPractice, setNeedsPractice] = useLocalStorage('skills.needsPractice', '')
-  const [plan, setPlan] = useLocalStorage('skills.plan', '')
+  const { record, status, saveState, setField } = useSupabaseRecord('clinical_skills', 1)
 
   return (
     <div>
       <PageHeader
         eyebrow="Clinical Skills and Clerkship Readiness"
-        title="Clinical Skills &amp; Clerkship Readiness"
-        description="This page tracks the group's exposure to core clinical skills across the rotation."
+        title="Clinical Skills & Clerkship Readiness"
+        description="Group synthesis of exposure to core clinical skills across the rotation."
       />
 
-      <div className="space-y-6">
-        <Section title="Skills Tracker" subtitle="Edit, add, or remove rows to match the skills relevant to this rotation.">
-          <DataTable
-            columns={columns}
-            rows={rows}
-            onChange={setRows}
-            addLabel="Add skill"
-            emptyRow={{ skill: '', confidence: '', notes: '' }}
-          />
-        </Section>
-
-        <Section title="Group Synthesis">
-          <div className="space-y-5">
-            <Area label="Skills our group is becoming confident in" value={confident} onChange={(e) => setConfident(e.target.value)} minRows={3} />
-            <Area label="Skills our group needs to practice more before clerkship" value={needsPractice} onChange={(e) => setNeedsPractice(e.target.value)} minRows={3} />
-            <Area label="Plan to improve these skills" value={plan} onChange={(e) => setPlan(e.target.value)} minRows={3} />
+      <Section>
+        <LoadState status={status === 'error' ? 'error' : 'ready'} error="Couldn't load this page's data.">
+          <div className="space-y-6">
+            <Area
+              label="Skills our group is becoming confident in"
+              value={record.confident_skills ?? ''}
+              onChange={(e) => setField('confident_skills', e.target.value)}
+              minRows={3}
+            />
+            <Area
+              label="Skills our group needs to practice more before clerkship"
+              value={record.skills_to_practice ?? ''}
+              onChange={(e) => setField('skills_to_practice', e.target.value)}
+              minRows={3}
+            />
+            <Area
+              label="Plan to improve these skills"
+              value={record.improvement_plan ?? ''}
+              onChange={(e) => setField('improvement_plan', e.target.value)}
+              minRows={3}
+            />
+            <div className="h-4"><SaveStatus state={saveState} /></div>
           </div>
-        </Section>
-      </div>
+        </LoadState>
+      </Section>
     </div>
   )
 }

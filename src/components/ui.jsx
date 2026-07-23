@@ -152,7 +152,7 @@ export function Button({ children, variant = 'primary', className = '', ...props
   }
   return (
     <button
-      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${variants[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
       {...props}
     >
       {children}
@@ -188,4 +188,31 @@ export function Notice({ tone = 'brand', title, children }) {
       <div className="text-sm leading-relaxed">{children}</div>
     </div>
   )
+}
+
+/** Inline loading/error state for a Supabase-backed read, used at the top of a page/section while data is loading or failed to load. */
+export function LoadState({ status, error, children }) {
+  if (status === 'loading') {
+    return <p className="text-sm text-ink-400 animate-pulse">Loading…</p>
+  }
+  if (status === 'error') {
+    return (
+      <Notice tone="amber" title="Couldn't load this data">
+        {error || 'Something went wrong talking to the database. Please refresh and try again.'}
+      </Notice>
+    )
+  }
+  return children
+}
+
+/** Inline save-state indicator: idle / saving / saved / error. */
+export function SaveStatus({ state }) {
+  if (state === 'idle' || !state) return null
+  const config = {
+    saving: { label: 'Saving…', className: 'text-ink-400' },
+    saved: { label: 'Saved', className: 'text-emerald-600' },
+    error: { label: 'Failed to save, please retry', className: 'text-red-600' },
+  }[state]
+  if (!config) return null
+  return <span className={`text-xs font-medium ${config.className}`}>{config.label}</span>
 }

@@ -1,34 +1,206 @@
-import { PageHeader, Section, Notice } from '../components/ui'
-import { DataTable } from '../components/DataTable'
-import { departments } from '../data/departments'
-import { useLocalStorage } from '../lib/useLocalStorage'
+import { useMemo, useState } from 'react'
+import { PageHeader, Section, Notice, Field, FieldRow, SelectField, Button, IconPlus, IconTrash, LoadState, SaveStatus } from '../components/ui'
+import { useSupabaseRecord } from '../lib/useSupabaseRecord'
+import { useSupabaseTable } from '../lib/useSupabaseTable'
+import { DEPARTMENT_OPTIONS, CLINICAL_AREA_OPTIONS } from '../data/options'
 
-const columns = [
-  { key: 'patientCode', label: 'Patient Code', width: '11%', placeholder: 'e.g., PT-014' },
-  { key: 'ageSex', label: 'Age / Sex', width: '9%', placeholder: 'e.g., 34/F' },
-  {
-    key: 'department',
-    label: 'Department',
-    width: '16%',
-    type: 'select',
-    options: departments.map((d) => d.name),
-    placeholder: 'Select department',
-  },
-  { key: 'setting', label: 'Clinical Setting', width: '13%', placeholder: 'e.g., Ward, OPD, community' },
-  { key: 'diagnosis', label: 'Chief Complaint / Diagnosis', width: '20%', placeholder: 'Non-identifying description' },
-  { key: 'date', label: 'Date', width: '10%', placeholder: 'DD/MM/YYYY' },
-  {
-    key: 'role',
-    label: 'Role',
-    width: '11%',
-    type: 'select',
-    options: ['Observed', 'Assisted', 'Interviewed', 'Presented', 'Managed with supervision'],
-    placeholder: 'Select role',
-  },
-]
+const STUDENT_ROLE_OPTIONS = ['Observed only', 'Assisted in ___', 'Performed Hx taking', 'Performed PE']
+
+const emptyEntry = {
+  date_seen: '',
+  department: '',
+  clinical_area: '',
+  patient_code: '',
+  age_sex: '',
+  chief_complaint: '',
+  working_diagnosis: '',
+  student_role: '',
+  student_role_detail: '',
+  student_assigned: '',
+}
+
+// Postgres' `date` column rejects an empty string (only null or a real
+// date); the <input type="date"> gives '' when left blank, so normalize
+// before every insert/update.
+function normalizeEntry(entry) {
+  return { ...entry, date_seen: entry.date_seen || null }
+}
+
+function CaseLogFields({ values, onChange }) {
+  function set(key, val) {
+    onChange({ ...values, [key]: val })
+  }
+  return (
+    <div className="space-y-4">
+      <FieldRow cols={3}>
+        <Field type="date" label="Date Seen" value={values.date_seen} onChange={(e) => set('date_seen', e.target.value)} />
+        <SelectField label="Department" value={values.department} onChange={(e) => set('department', e.target.value)}>
+          <option value="" disabled>Select department</option>
+          {DEPARTMENT_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+        </SelectField>
+        <SelectField label="Clinical Area" value={values.clinical_area} onChange={(e) => set('clinical_area', e.target.value)}>
+          <option value="" disabled>Select area</option>
+          {CLINICAL_AREA_OPTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+        </SelectField>
+      </FieldRow>
+      <FieldRow cols={3}>
+        <Field label="Patient Code" placeholder="e.g., Pt-001, no real identifiers" value={values.patient_code} onChange={(e) => set('patient_code', e.target.value)} />
+        <Field label="Age/Sex" placeholder="e.g., 45/M" value={values.age_sex} onChange={(e) => set('age_sex', e.target.value)} />
+        <Field label="Student Assigned" value={values.student_assigned} onChange={(e) => set('student_assigned', e.target.value)} />
+      </FieldRow>
+      <FieldRow>
+        <Field label="Chief Complaint / Reason for Consult" value={values.chief_complaint} onChange={(e) => set('chief_complaint', e.target.value)} />
+        <Field label="Working Diagnosis" value={values.working_diagnosis} onChange={(e) => set('working_diagnosis', e.target.value)} />
+      </FieldRow>
+      <FieldRow>
+        <SelectField label="Student Role" value={values.student_role} onChange={(e) => set('student_role', e.target.value)}>
+          <option value="" disabled>Select role</option>
+          {STUDENT_ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </SelectField>
+        {values.student_role === 'Assisted in ___' && (
+          <Field
+            label="Specify what was assisted"
+            placeholder="e.g., wound dressing"
+            value={values.student_role_detail}
+            onChange={(e) => set('student_role_detail', e.target.value)}
+          />
+        )}
+      </FieldRow>
+    </div>
+  )
+}
+
+function exportCsv(rows) {
+  const columns = [
+    'date_seen', 'department', 'clinical_area', 'patient_code', 'age_sex',
+    'chief_complaint', 'working_diagnosis', 'student_role', 'student_role_detail', 'student_assigned',
+  ]
+  const header = columns.join(',')
+  const lines = rows.map((row) =>
+    columns
+      .map((col) => `"${String(row[col] ?? '').replace(/"/g, '""')}"`)
+      .join(',')
+  )
+  const csv = [header, ...lines].join('\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'case_log_census.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function CaseLogRow({ row, index, onUpdate, onDelete }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(row)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    const { error } = await onUpdate(row.id, normalizeEntry(draft))
+    setSaving(false)
+    if (!error) setEditing(false)
+  }
+
+  function handleDelete() {
+    if (window.confirm('Delete this case log entry? This cannot be undone.')) {
+      onDelete(row.id)
+    }
+  }
+
+  if (editing) {
+    return (
+      <tr className="border-b border-ink-100 bg-ink-50">
+        <td colSpan={11} className="p-4">
+          <CaseLogFields values={draft} onChange={setDraft} />
+          <div className="flex gap-2 mt-4">
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+            <Button variant="outline" onClick={() => { setDraft(row); setEditing(false) }}>Cancel</Button>
+          </div>
+        </td>
+      </tr>
+    )
+  }
+
+  return (
+    <tr className="border-b border-ink-100 last:border-0">
+      <td className="py-2.5 pr-3 text-sm text-ink-500">{index + 1}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700 whitespace-nowrap">{row.date_seen || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.department || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.clinical_area || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.patient_code || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.age_sex || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.chief_complaint || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.working_diagnosis || '—'}</td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">
+        {row.student_role || '—'}
+        {row.student_role_detail && <span className="text-ink-400"> ({row.student_role_detail})</span>}
+      </td>
+      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.student_assigned || '—'}</td>
+      <td className="py-2.5 pr-1">
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => setEditing(true)} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
+            Edit
+          </button>
+          <button type="button" onClick={handleDelete} aria-label="Delete row" className="w-7 h-7 grid place-items-center rounded-lg text-ink-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+            <IconTrash />
+          </button>
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 export default function CaseLogCensus() {
-  const [rows, setRows] = useLocalStorage('caselog.rows', [])
+  const { record, status: metaStatus, saveState, setField } = useSupabaseRecord('group_metadata', 1)
+  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
+  const [newEntry, setNewEntry] = useState(emptyEntry)
+  const [adding, setAdding] = useState(false)
+  const [addError, setAddError] = useState(null)
+  const [sortKey, setSortKey] = useState(null)
+  const [sortDir, setSortDir] = useState('asc')
+
+  const sortedRows = useMemo(() => {
+    if (!sortKey) return rows
+    const copy = [...rows]
+    copy.sort((a, b) => {
+      const av = a[sortKey] ?? ''
+      const bv = b[sortKey] ?? ''
+      return sortDir === 'asc' ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av))
+    })
+    return copy
+  }, [rows, sortKey, sortDir])
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
+  async function handleAdd() {
+    setAdding(true)
+    setAddError(null)
+    const { error: insertError } = await insert(normalizeEntry(newEntry))
+    setAdding(false)
+    if (insertError) {
+      setAddError(insertError.message)
+      return
+    }
+    setNewEntry(emptyEntry)
+  }
+
+  const sortHeader = (label, key) => (
+    <th
+      className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3 whitespace-nowrap cursor-pointer select-none hover:text-ink-700"
+      onClick={() => toggleSort(key)}
+    >
+      {label} {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+    </th>
+  )
 
   return (
     <div>
@@ -39,19 +211,72 @@ export default function CaseLogCensus() {
       />
 
       <div className="space-y-6">
+        <Section title="Header Information">
+          <LoadState status={metaStatus === 'error' ? 'error' : 'ready'} error="Couldn't load group information.">
+            <div className="space-y-4">
+              <FieldRow cols={3}>
+                <Field label="Group" value={record.group_name ?? ''} onChange={(e) => setField('group_name', e.target.value)} />
+                <Field label="Rotation Block" value={record.rotation_block ?? ''} onChange={(e) => setField('rotation_block', e.target.value)} />
+                <Field label="Inclusive Dates" value={record.inclusive_dates ?? ''} onChange={(e) => setField('inclusive_dates', e.target.value)} />
+              </FieldRow>
+              <FieldRow>
+                <Field label="Faculty/Preceptor Signature" value={record.faculty_signature ?? ''} onChange={(e) => setField('faculty_signature', e.target.value)} />
+                <Field type="date" label="Date" value={record.faculty_sign_date ?? ''} onChange={(e) => setField('faculty_sign_date', e.target.value)} />
+              </FieldRow>
+              <div className="h-4"><SaveStatus state={saveState} /></div>
+            </div>
+          </LoadState>
+        </Section>
+
         <Notice tone="amber" title="Confidentiality reminder">
           Use patient codes only. Do not include patient names, hospital numbers, addresses,
-          contact numbers, photos, or any other identifying information.
+          contact numbers, photos, or any identifying information.
         </Notice>
 
+        <Section title="Add Case Entry">
+          <CaseLogFields values={newEntry} onChange={setNewEntry} />
+          {addError && <p className="text-sm text-red-600 mt-3">Failed to save: {addError}</p>}
+          <Button className="mt-4" onClick={handleAdd} disabled={adding}>
+            <IconPlus /> {adding ? 'Adding…' : 'Add Entry'}
+          </Button>
+        </Section>
+
         <Section title={`Case Log (${rows.length} ${rows.length === 1 ? 'entry' : 'entries'})`}>
-          <DataTable
-            columns={columns}
-            rows={rows}
-            onChange={setRows}
-            addLabel="Add case entry"
-            emptyRow={{ patientCode: '', ageSex: '', department: '', setting: '', diagnosis: '', date: '', role: '' }}
-          />
+          <div className="flex justify-end mb-3">
+            <Button variant="outline" onClick={() => exportCsv(sortedRows)} disabled={rows.length === 0}>
+              Export to CSV
+            </Button>
+          </div>
+          <LoadState status={status} error={error}>
+            {rows.length === 0 ? (
+              <p className="text-sm text-ink-400 italic py-4">No entries yet — add the group's first case above.</p>
+            ) : (
+              <div className="overflow-x-auto -mx-5 sm:-mx-7 px-5 sm:px-7">
+                <table className="w-full table-fixed border-collapse min-w-[1200px]">
+                  <thead>
+                    <tr>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">No.</th>
+                      {sortHeader('Date Seen', 'date_seen')}
+                      {sortHeader('Department', 'department')}
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Clinical Area</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Patient Code</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Age/Sex</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Chief Complaint</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Working Dx</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Student Role</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Student Assigned</th>
+                      <th className="border-b border-ink-200 pb-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedRows.map((row, i) => (
+                      <CaseLogRow key={row.id} row={row} index={i} onUpdate={update} onDelete={remove} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </LoadState>
         </Section>
       </div>
     </div>

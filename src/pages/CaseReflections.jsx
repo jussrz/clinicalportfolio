@@ -1,18 +1,28 @@
-import { Button, IconPlus, Notice, PageHeader } from '../components/ui'
-import CaseReflectionCard, { emptyReflection } from '../components/CaseReflectionCard'
-import { useLocalStorage } from '../lib/useLocalStorage'
+import { useState } from 'react'
+import { Button, IconPlus, LoadState, Notice, PageHeader } from '../components/ui'
+import CaseReflectionCard, { CaseReflectionForm, emptyReflection } from '../components/CaseReflectionCard'
+import { useSupabaseTable } from '../lib/useSupabaseTable'
 
 export default function CaseReflections() {
-  const [reflections, setReflections] = useLocalStorage('caseReflections', [])
+  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_reflections', { orderBy: 'reflection_no', ascending: true })
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState(emptyReflection)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
-  function addReflection() {
-    setReflections([...reflections, emptyReflection()])
-  }
-  function updateReflection(i, val) {
-    setReflections(reflections.map((r, idx) => (idx === i ? val : r)))
-  }
-  function deleteReflection(i) {
-    setReflections(reflections.filter((_, idx) => idx !== i))
+  async function handleAddSave() {
+    setSaving(true)
+    setSaveError(null)
+    // reflection_no is assigned server-side (see supabase/schema.sql) so
+    // concurrent adds from different group members can never collide.
+    const { error: insertError } = await insert(draft)
+    setSaving(false)
+    if (insertError) {
+      setSaveError(insertError.message)
+      return
+    }
+    setDraft(emptyReflection)
+    setAdding(false)
   }
 
   return (
@@ -29,25 +39,42 @@ export default function CaseReflections() {
           numbers, or other identifying information.
         </Notice>
 
-        {reflections.map((r, i) => (
-          <CaseReflectionCard
-            key={r.id}
-            reflection={r}
-            index={i}
-            onChange={(val) => updateReflection(i, val)}
-            onDelete={() => deleteReflection(i)}
-          />
-        ))}
+        <LoadState status={status} error={error}>
+          <div className="space-y-6">
+            {rows.map((r) => (
+              <CaseReflectionCard
+                key={r.id}
+                reflection={r}
+                onSave={(values) => update(r.id, values)}
+                onDelete={() => remove(r.id)}
+              />
+            ))}
 
-        {reflections.length === 0 && (
-          <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
-            <p className="text-sm text-ink-500">No case reflections yet.</p>
+            {rows.length === 0 && !adding && (
+              <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
+                <p className="text-sm text-ink-500">No case reflections yet.</p>
+              </div>
+            )}
           </div>
-        )}
+        </LoadState>
 
-        <Button onClick={addReflection}>
-          <IconPlus /> Add Case Reflection
-        </Button>
+        {adding ? (
+          <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">
+              New Case Reflection
+            </p>
+            <CaseReflectionForm values={draft} onChange={setDraft} />
+            {saveError && <p className="text-sm text-red-600">Failed to save: {saveError}</p>}
+            <div className="flex gap-2">
+              <Button onClick={handleAddSave} disabled={saving}>{saving ? 'Saving…' : 'Save Reflection'}</Button>
+              <Button variant="outline" onClick={() => { setDraft(emptyReflection); setAdding(false) }}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <Button onClick={() => setAdding(true)}>
+            <IconPlus /> Add Case Reflection
+          </Button>
+        )}
       </div>
     </div>
   )

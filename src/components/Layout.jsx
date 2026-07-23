@@ -14,7 +14,6 @@ const icons = {
   message: 'M4 4h16v12H8l-4 4V4Z',
   users: 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2.5 20a5.5 5.5 0 0 1 11 0M16.5 11a3 3 0 1 0 0-6M15 14.5a5.5 5.5 0 0 1 6.5 5.5',
   refresh: 'M21 12a9 9 0 1 1-3-6.7M21 4v5h-5',
-  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z',
   menu: 'M4 6h16M4 12h16M4 18h16',
   close: 'M6 6l12 12M18 6 6 18',
   chevron: 'm9 6 6 6-6 6',
@@ -82,14 +81,11 @@ export default function Layout() {
       <NavLink to="/feedback-action-plan" className={navLinkClass}>
         <Icon name="message" /> Feedback &amp; Action Plan
       </NavLink>
-      <NavLink to="/individual-contributions" className={navLinkClass}>
-        <Icon name="users" /> Individual Contributions
+      <NavLink to="/individual-contribution" className={navLinkClass}>
+        <Icon name="users" /> Individual Contribution
       </NavLink>
       <NavLink to="/group-reflections" className={navLinkClass}>
         <Icon name="refresh" /> Group Reflections
-      </NavLink>
-      <NavLink to="/confidentiality" className={navLinkClass}>
-        <Icon name="shield" /> Confidentiality Statement
       </NavLink>
     </nav>
   )
@@ -129,7 +125,7 @@ export default function Layout() {
       )}
 
       <main className="flex-1 min-w-0">
-        <div className="max-w-4xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 py-8 sm:py-12">
           <Outlet />
         </div>
       </main>
@@ -164,7 +160,7 @@ function SidebarHeader() {
 function SidebarFooter() {
   return (
     <div className="px-4 py-4 border-t border-ink-800 text-xs text-ink-500">
-      Saved automatically on this device.
+      University of Southern Mindanao — College of Medicine
     </div>
   )
 }

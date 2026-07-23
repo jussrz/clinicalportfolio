@@ -1,78 +1,114 @@
-import { Area, Button, Field, FieldRow, IconPlus, IconTrash, PageHeader, Section } from '../components/ui'
-import { useLocalStorage } from '../lib/useLocalStorage'
-import { GROUP_MEMBERS } from '../data/group'
+import { useState } from 'react'
+import { Area, Button, Field, IconPlus, IconTrash, LoadState, PageHeader, Section } from '../components/ui'
+import { useSupabaseTable } from '../lib/useSupabaseTable'
 
-const emptyMember = (name = '') => ({
-  id: crypto.randomUUID(),
-  name,
-  role: '',
-  departments: '',
-  contributions: '',
-})
+const emptyRow = { student_name: '', contribution_summary: '' }
 
-const rosterMembers = () => GROUP_MEMBERS.map((surname) => emptyMember(surname))
+function ContributionRow({ row, onUpdate, onDelete }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(row)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    const { error } = await onUpdate(row.id, draft)
+    setSaving(false)
+    if (!error) setEditing(false)
+  }
+
+  function handleDelete() {
+    if (window.confirm(`Remove ${row.student_name || 'this student'} from the contributions list?`)) {
+      onDelete(row.id)
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-4">
+        <Field label="Student Name" value={draft.student_name} onChange={(e) => setDraft({ ...draft, student_name: e.target.value })} />
+        <Area label="Contribution Summary" value={draft.contribution_summary} onChange={(e) => setDraft({ ...draft, contribution_summary: e.target.value })} minRows={3} />
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          <Button variant="outline" onClick={() => { setDraft(row); setEditing(false) }}>Cancel</Button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-semibold text-ink-800">{row.student_name || 'Unnamed student'}</p>
+        <div className="flex items-center gap-1 shrink-0">
+          <button type="button" onClick={() => { setDraft(row); setEditing(true) }} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
+            Edit
+          </button>
+          <button type="button" onClick={handleDelete} aria-label="Remove student" className="w-7 h-7 grid place-items-center rounded-lg text-ink-300 hover:text-red-600 hover:bg-red-50 transition-colors">
+            <IconTrash />
+          </button>
+        </div>
+      </div>
+      <p className="text-[15px] text-ink-700 mt-2 whitespace-pre-line">
+        {row.contribution_summary || <span className="text-ink-400 italic">No contribution summary yet.</span>}
+      </p>
+    </div>
+  )
+}
 
 export default function IndividualContribution() {
-  const [members, setMembers] = useLocalStorage('contributions.members', rosterMembers())
+  const { rows, status, error, insert, update, remove } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState(emptyRow)
+  const [saving, setSaving] = useState(false)
 
-  function addMember() {
-    setMembers([...members, emptyMember()])
-  }
-  function updateMember(i, key, val) {
-    setMembers(members.map((m, idx) => (idx === i ? { ...m, [key]: val } : m)))
-  }
-  function removeMember(i) {
-    setMembers(members.filter((_, idx) => idx !== i))
+  async function handleAdd() {
+    setSaving(true)
+    const { error: insertError } = await insert(draft)
+    setSaving(false)
+    if (!insertError) {
+      setDraft(emptyRow)
+      setAdding(false)
+    }
   }
 
   return (
     <div>
       <PageHeader
         eyebrow="Individual Contribution"
-        title="Individual Contributions"
-        description="Although the portfolio is submitted as a group, each student's contributions should be documented here."
+        title="Individual Contribution"
+        description="Although the portfolio is submitted as a group, each student's contributions are documented here."
       />
 
       <div className="space-y-6">
-        {members.map((m, i) => (
-          <Section key={m.id}>
-            <div className="flex items-start justify-between gap-3 mb-5">
-              <p className="text-sm font-semibold text-ink-800">{m.name || `Member ${i + 1}`}</p>
-              <button
-                type="button"
-                onClick={() => removeMember(i)}
-                aria-label="Remove member"
-                className="shrink-0 w-8 h-8 grid place-items-center rounded-lg text-ink-300 hover:text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <IconTrash />
-              </button>
-            </div>
+        <LoadState status={status} error={error}>
+          <div className="space-y-4">
+            {rows.map((row) => (
+              <ContributionRow key={row.id} row={row} onUpdate={update} onDelete={remove} />
+            ))}
+            {rows.length === 0 && !adding && (
+              <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
+                <p className="text-sm text-ink-500">No students added yet.</p>
+              </div>
+            )}
+          </div>
+        </LoadState>
+
+        {adding ? (
+          <Section title="Add Student">
             <div className="space-y-4">
-              <FieldRow>
-                <Field label="Name" placeholder="Add first name / initial to complete" value={m.name} onChange={(e) => updateMember(i, 'name', e.target.value)} />
-                <Field label="Role in the Group" placeholder="e.g., Documentation lead, presenter" value={m.role} onChange={(e) => updateMember(i, 'role', e.target.value)} />
-              </FieldRow>
-              <Field label="Department(s) Involved" placeholder="e.g., Pediatrics, Surgery" value={m.departments} onChange={(e) => updateMember(i, 'departments', e.target.value)} />
-              <Area
-                label="Key Contributions"
-                placeholder="Specific tasks, case write-ups, research, or coordination this student contributed to the portfolio."
-                value={m.contributions}
-                onChange={(e) => updateMember(i, 'contributions', e.target.value)}
-                minRows={3}
-              />
+              <Field label="Student Name" value={draft.student_name} onChange={(e) => setDraft({ ...draft, student_name: e.target.value })} />
+              <Area label="Contribution Summary" value={draft.contribution_summary} onChange={(e) => setDraft({ ...draft, contribution_summary: e.target.value })} minRows={3} />
+              <div className="flex gap-2">
+                <Button onClick={handleAdd} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                <Button variant="outline" onClick={() => { setDraft(emptyRow); setAdding(false) }}>Cancel</Button>
+              </div>
             </div>
           </Section>
-        ))}
-
-        {members.length === 0 && (
-          <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
-            <p className="text-sm text-ink-500">No members added yet.</p>
-          </div>
+        ) : (
+          <Button onClick={() => setAdding(true)}>
+            <IconPlus /> Add Student
+          </Button>
         )}
-
-        <Button onClick={addMember}>
-          <IconPlus /> Add Member
-        </Button>
       </div>
     </div>
   )
