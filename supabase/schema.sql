@@ -70,8 +70,12 @@ create table if not exists case_log_entries (
 );
 
 -- ---------------------------------------------------------------------
--- case_reflections — Selected Case Reflections, one row per student's
--- reflection (matches the school's official "Student Reflection" form).
+-- case_reflections — Selected Case Reflections: a group case-discussion
+-- writeup for one case picked from the Case Log Census (matches the
+-- school's official "Selected Case Reflection" format). Department,
+-- Clinical Area, Patient Code, Age/Sex, and Student/s Involved are never
+-- stored here — they're read live off the linked case_log_entries row via
+-- case_log_entry_id, so there's exactly one source of truth for them.
 -- reflection_no is assigned server-side from a sequence (not computed as
 -- max(reflection_no)+1 on the client) so two people adding a reflection at
 -- nearly the same moment can never collide on the same number.
@@ -81,16 +85,20 @@ create sequence if not exists case_reflections_no_seq;
 create table if not exists case_reflections (
   id uuid primary key default gen_random_uuid(),
   reflection_no int not null default nextval('case_reflections_no_seq'),
-  case_log_entry_id uuid references case_log_entries(id) on delete cascade,
-  student_name text not null default '',
-  year_level_section text not null default '',
-  group_name text not null default '',
-  rotation_block text not null default '',
-  inclusive_dates text not null default '',
-  common_cases text not null default '',
-  skills_practiced text not null default '',
-  clinical_lesson text not null default '',
-  improvement_area text not null default '',
+  case_log_entry_id uuid not null references case_log_entries(id) on delete cascade,
+  brief_summary text not null default '',
+  pertinent_positives text not null default '',
+  pertinent_negatives text not null default '',
+  pe_findings text not null default '',
+  problem_list text[] not null default '{}',
+  differential_diagnoses text[] not null default '{}',
+  workup text not null default '',
+  management_priorities text not null default '',
+  referral_considerations text not null default '',
+  group_learning_points text[] not null default '{}',
+  group_did_well text not null default '',
+  group_challenges text not null default '',
+  group_improvements text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -99,10 +107,35 @@ create table if not exists case_reflections (
 -- default wired up.
 alter table case_reflections alter column reflection_no set default nextval('case_reflections_no_seq');
 
--- Idempotent — covers tables created before a reflection was required to
--- originate from a specific Case Log Census row. A reflection only exists to
--- discuss its case, so removing the case removes the reflection with it.
+-- Idempotent — covers tables created under the older per-student
+-- "Student Reflection" essay format (name/year-level/group/rotation/dates
+-- header + 4 free-text prompts), before this became a group case writeup
+-- keyed to one Case Log Census entry.
+alter table case_reflections drop column if exists student_name;
+alter table case_reflections drop column if exists year_level_section;
+alter table case_reflections drop column if exists group_name;
+alter table case_reflections drop column if exists rotation_block;
+alter table case_reflections drop column if exists inclusive_dates;
+alter table case_reflections drop column if exists common_cases;
+alter table case_reflections drop column if exists skills_practiced;
+alter table case_reflections drop column if exists clinical_lesson;
+alter table case_reflections drop column if exists improvement_area;
+
 alter table case_reflections add column if not exists case_log_entry_id uuid references case_log_entries(id) on delete cascade;
+alter table case_reflections alter column case_log_entry_id set not null;
+alter table case_reflections add column if not exists brief_summary text not null default '';
+alter table case_reflections add column if not exists pertinent_positives text not null default '';
+alter table case_reflections add column if not exists pertinent_negatives text not null default '';
+alter table case_reflections add column if not exists pe_findings text not null default '';
+alter table case_reflections add column if not exists problem_list text[] not null default '{}';
+alter table case_reflections add column if not exists differential_diagnoses text[] not null default '{}';
+alter table case_reflections add column if not exists workup text not null default '';
+alter table case_reflections add column if not exists management_priorities text not null default '';
+alter table case_reflections add column if not exists referral_considerations text not null default '';
+alter table case_reflections add column if not exists group_learning_points text[] not null default '{}';
+alter table case_reflections add column if not exists group_did_well text not null default '';
+alter table case_reflections add column if not exists group_challenges text not null default '';
+alter table case_reflections add column if not exists group_improvements text not null default '';
 
 -- ---------------------------------------------------------------------
 -- individual_contributions

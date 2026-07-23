@@ -1,36 +1,137 @@
 import { useState } from 'react'
-import { Area, Button, IconTrash } from './ui'
+import { Area, Button, IconTrash, ListField } from './ui'
 import { underlinedField } from '../lib/pdf'
+import { roleLabel } from '../lib/caseLog'
 
-/** The essay-only field set. Student, group, and case details are captured
- * once when the reflection is created from a Case Log Census entry and are
- * never editable afterward — only these fields are. */
+const emptyContent = {
+  brief_summary: '',
+  pertinent_positives: '',
+  pertinent_negatives: '',
+  pe_findings: '',
+  problem_list: [],
+  differential_diagnoses: [],
+  workup: '',
+  management_priorities: '',
+  referral_considerations: '',
+  group_learning_points: [],
+  group_did_well: '',
+  group_challenges: '',
+  group_improvements: '',
+}
+
+/** The editable content of a Selected Case Reflection. Department, Clinical
+ * Area, Patient Code, Age/Sex, and Student/s Involved come from the linked
+ * Case Log Census entry and are never part of this form. */
 export function CaseReflectionForm({ values, onChange }) {
   function set(key, val) {
     onChange({ ...values, [key]: val })
   }
 
   return (
-    <div className="space-y-6">
-      <Area label="Most common cases/conditions encountered" value={values.common_cases} onChange={(e) => set('common_cases', e.target.value)} minRows={3} />
-      <Area label="Skills I was able to observe or practice" value={values.skills_practiced} onChange={(e) => set('skills_practiced', e.target.value)} minRows={3} />
-      <Area label="One clinical lesson I learned from this rotation" value={values.clinical_lesson} onChange={(e) => set('clinical_lesson', e.target.value)} minRows={3} />
-      <Area label="One area I need to improve before clerkship" value={values.improvement_area} onChange={(e) => set('improvement_area', e.target.value)} minRows={3} />
+    <div className="space-y-8">
+      <Area
+        label="Brief Case Summary"
+        hint="Provide a short, non-identifying summary of the case."
+        value={values.brief_summary}
+        onChange={(e) => set('brief_summary', e.target.value)}
+        minRows={3}
+      />
+
+      <div>
+        <p className="text-sm font-semibold text-ink-900 mb-3">Key History and Physical Examination Findings</p>
+        <div className="space-y-4">
+          <Area label="Pertinent positives" value={values.pertinent_positives} onChange={(e) => set('pertinent_positives', e.target.value)} minRows={2} />
+          <Area label="Pertinent negatives" value={values.pertinent_negatives} onChange={(e) => set('pertinent_negatives', e.target.value)} minRows={2} />
+          <Area label="Relevant physical examination findings" value={values.pe_findings} onChange={(e) => set('pe_findings', e.target.value)} minRows={2} />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold text-ink-900 mb-3">Clinical Reasoning</p>
+        <div className="space-y-4">
+          <ListField label="Problem list" items={values.problem_list} onChange={(next) => set('problem_list', next)} placeholder="e.g., Acute abdominal pain" addLabel="Add problem" />
+          <ListField label="Differential diagnoses" items={values.differential_diagnoses} onChange={(next) => set('differential_diagnoses', next)} placeholder="e.g., Appendicitis" addLabel="Add diagnosis" />
+          <Area label="Suggested diagnostics/work-up" value={values.workup} onChange={(e) => set('workup', e.target.value)} minRows={2} />
+          <Area label="Initial management priorities" value={values.management_priorities} onChange={(e) => set('management_priorities', e.target.value)} minRows={2} />
+          <Area label="Referral or disposition considerations" value={values.referral_considerations} onChange={(e) => set('referral_considerations', e.target.value)} minRows={2} />
+        </div>
+      </div>
+
+      <ListField label="Group Learning Points" items={values.group_learning_points} onChange={(next) => set('group_learning_points', next)} placeholder="e.g., Recognize red-flag signs early" addLabel="Add learning point" />
+
+      <div>
+        <p className="text-sm font-semibold text-ink-900 mb-3">Group Reflection</p>
+        <div className="space-y-4">
+          <Area label="What did we do well as a group?" value={values.group_did_well} onChange={(e) => set('group_did_well', e.target.value)} minRows={2} />
+          <Area label="What was difficult or challenging?" value={values.group_challenges} onChange={(e) => set('group_challenges', e.target.value)} minRows={2} />
+          <Area label="What should we improve before clerkship?" value={values.group_improvements} onChange={(e) => set('group_improvements', e.target.value)} minRows={2} />
+        </div>
+      </div>
     </div>
   )
 }
 
-async function exportReflectionPdf(reflection) {
+function numberedLines(items) {
+  return items.length ? items.map((item, i) => `${i + 1}. ${item}`) : ['—']
+}
+
+async function exportReflectionPdf(reflection, caseEntry) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
   const marginX = 50
   const lineEndX = pageWidth - marginX
+  const maxWidth = lineEndX - marginX
   let y = 60
+
+  function ensureRoom(nextLineCount) {
+    if (y + nextLineCount * 13 > pageHeight - 50) {
+      doc.addPage()
+      y = 50
+    }
+  }
+
+  function writeParagraph(label, value) {
+    ensureRoom(2)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text(label, marginX, y)
+    y += 15
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(value || '—', maxWidth)
+    ensureRoom(lines.length)
+    doc.text(lines, marginX, y)
+    y += lines.length * 13 + 14
+  }
+
+  function writeList(label, items) {
+    ensureRoom(2)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text(label, marginX, y)
+    y += 15
+    doc.setFont('helvetica', 'normal')
+    numberedLines(items).forEach((line) => {
+      const lines = doc.splitTextToSize(line, maxWidth)
+      ensureRoom(lines.length)
+      doc.text(lines, marginX, y)
+      y += lines.length * 13
+    })
+    y += 14
+  }
+
+  function writeSectionHeading(label) {
+    ensureRoom(2)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text(label, marginX, y)
+    y += 20
+  }
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
-  doc.text('STUDENT REFLECTION', pageWidth / 2, y, { align: 'center' })
+  doc.text('SELECTED CASE REFLECTION', pageWidth / 2, y, { align: 'center' })
   y += 16
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
@@ -40,37 +141,43 @@ async function exportReflectionPdf(reflection) {
   y += 32
 
   doc.setFontSize(10)
-  underlinedField(doc, 'Name of Student:', reflection.student_name, marginX, y, lineEndX)
-  y += 22
-  underlinedField(doc, 'Year Level / Section:', reflection.year_level_section, marginX, y, lineEndX)
-  y += 22
-  underlinedField(doc, 'Group:', reflection.group_name, marginX, y, lineEndX)
-  y += 22
-  underlinedField(doc, 'Rotation Block:', reflection.rotation_block, marginX, y, lineEndX)
-  y += 22
-  underlinedField(doc, 'Inclusive Dates:', reflection.inclusive_dates, marginX, y, lineEndX)
-  y += 36
+  underlinedField(doc, 'Selected Case Reflection No.:', reflection.reflection_no, marginX, y, lineEndX)
+  y += 20
+  underlinedField(doc, 'Department:', caseEntry?.department, marginX, y, lineEndX)
+  y += 20
+  underlinedField(doc, 'Clinical Area:', caseEntry?.clinical_area, marginX, y, lineEndX)
+  y += 20
+  underlinedField(doc, 'Patient Code:', caseEntry?.patient_code, marginX, y, lineEndX)
+  y += 20
+  underlinedField(doc, 'Age/Sex:', caseEntry?.age_sex, marginX, y, lineEndX)
+  y += 20
+  underlinedField(doc, 'Student/s Involved:', caseEntry?.student_assigned, marginX, y, lineEndX)
+  y += 20
+  underlinedField(doc, 'Student Role/s:', caseEntry ? roleLabel(caseEntry) : '', marginX, y, lineEndX)
+  y += 32
 
-  const maxWidth = lineEndX - marginX
-  const sections = [
-    ['Most common cases/conditions encountered:', reflection.common_cases],
-    ['Skills I was able to observe or practice:', reflection.skills_practiced],
-    ['One clinical lesson I learned from this rotation:', reflection.clinical_lesson],
-    ['One area I need to improve before clerkship:', reflection.improvement_area],
-  ]
+  writeParagraph('Brief Case Summary', reflection.brief_summary)
 
-  sections.forEach(([label, value]) => {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.text(label, marginX, y)
-    y += 16
-    doc.setFont('helvetica', 'normal')
-    const lines = doc.splitTextToSize(value || ' ', maxWidth)
-    doc.text(lines, marginX, y)
-    y += lines.length * 13 + 20
-  })
+  writeSectionHeading('Key History and Physical Examination Findings')
+  writeParagraph('Pertinent positives:', reflection.pertinent_positives)
+  writeParagraph('Pertinent negatives:', reflection.pertinent_negatives)
+  writeParagraph('Relevant physical examination findings:', reflection.pe_findings)
 
-  doc.save(`student_reflection_${reflection.reflection_no}.pdf`)
+  writeSectionHeading('Clinical Reasoning')
+  writeList('Problem list:', reflection.problem_list)
+  writeList('Differential diagnoses:', reflection.differential_diagnoses)
+  writeParagraph('Suggested diagnostics/work-up:', reflection.workup)
+  writeParagraph('Initial management priorities:', reflection.management_priorities)
+  writeParagraph('Referral or disposition considerations:', reflection.referral_considerations)
+
+  writeList('Group Learning Points', reflection.group_learning_points)
+
+  writeSectionHeading('Group Reflection')
+  writeParagraph('What did we do well as a group?', reflection.group_did_well)
+  writeParagraph('What was difficult or challenging?', reflection.group_challenges)
+  writeParagraph('What should we improve before clerkship?', reflection.group_improvements)
+
+  doc.save(`selected_case_reflection_${reflection.reflection_no}.pdf`)
 }
 
 function LockedField({ label, value }) {
@@ -85,21 +192,32 @@ function LockedField({ label, value }) {
 export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDelete, defaultOpen = false, defaultEditing = false }) {
   const [open, setOpen] = useState(defaultOpen || defaultEditing)
   const [editing, setEditing] = useState(defaultEditing)
-  const [draft, setDraft] = useState(reflection)
+  const [draft, setDraft] = useState({ ...emptyContent, ...reflection })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [exporting, setExporting] = useState(false)
 
-  const summaryLine = [reflection.student_name, reflection.year_level_section].filter(Boolean).join(' · ')
+  const summaryLine = caseEntry
+    ? [caseEntry.department, caseEntry.clinical_area, caseEntry.chief_complaint].filter(Boolean).join(' · ')
+    : ''
 
   async function handleSave() {
     setSaving(true)
     setSaveError(null)
     const { error } = await onSave({
-      common_cases: draft.common_cases,
-      skills_practiced: draft.skills_practiced,
-      clinical_lesson: draft.clinical_lesson,
-      improvement_area: draft.improvement_area,
+      brief_summary: draft.brief_summary,
+      pertinent_positives: draft.pertinent_positives,
+      pertinent_negatives: draft.pertinent_negatives,
+      pe_findings: draft.pe_findings,
+      problem_list: draft.problem_list,
+      differential_diagnoses: draft.differential_diagnoses,
+      workup: draft.workup,
+      management_priorities: draft.management_priorities,
+      referral_considerations: draft.referral_considerations,
+      group_learning_points: draft.group_learning_points,
+      group_did_well: draft.group_did_well,
+      group_challenges: draft.group_challenges,
+      group_improvements: draft.group_improvements,
     })
     setSaving(false)
     if (error) {
@@ -118,7 +236,7 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
   async function handleExport() {
     setExporting(true)
     try {
-      await exportReflectionPdf(reflection)
+      await exportReflectionPdf(reflection, caseEntry)
     } finally {
       setExporting(false)
     }
@@ -156,20 +274,16 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
         <div className="px-5 sm:px-7 pb-7 pt-1 border-t border-ink-100 space-y-6">
           <div className="pt-6">
             <p className="text-xs font-semibold uppercase tracking-widest text-ink-400 mb-3">
-              Student &amp; case details — auto-filled, locked
+              Case details — auto-filled from the log, locked
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <LockedField label="Name of Student" value={reflection.student_name} />
-              <LockedField label="Year Level / Section" value={reflection.year_level_section} />
-              <LockedField label="Group" value={reflection.group_name} />
-              <LockedField label="Rotation Block" value={reflection.rotation_block} />
-              <LockedField label="Inclusive Dates" value={reflection.inclusive_dates} />
+              <LockedField label="Department" value={caseEntry?.department} />
+              <LockedField label="Clinical Area" value={caseEntry?.clinical_area} />
+              <LockedField label="Patient Code" value={caseEntry?.patient_code} />
+              <LockedField label="Age/Sex" value={caseEntry?.age_sex} />
+              <LockedField label="Student/s Involved" value={caseEntry?.student_assigned} />
+              <LockedField label="Student Role/s" value={caseEntry ? roleLabel(caseEntry) : ''} />
             </div>
-            {caseEntry && (
-              <p className="text-sm text-ink-500 mt-3">
-                Selected case: {[caseEntry.department, caseEntry.clinical_area, caseEntry.chief_complaint].filter(Boolean).join(' · ') || '—'}
-              </p>
-            )}
           </div>
 
           {editing ? (
@@ -178,14 +292,14 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
               {saveError && <p className="text-sm text-red-600">Failed to save: {saveError}</p>}
               <div className="flex gap-2">
                 <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-                <Button variant="outline" onClick={() => { setDraft(reflection); setEditing(false) }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setDraft({ ...emptyContent, ...reflection }); setEditing(false) }}>Cancel</Button>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
               <ReflectionReadout reflection={reflection} />
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => { setDraft(reflection); setEditing(true) }}>Edit Reflection</Button>
+                <Button variant="outline" onClick={() => { setDraft({ ...emptyContent, ...reflection }); setEditing(true) }}>Edit Reflection</Button>
                 <Button variant="outline" onClick={handleExport} disabled={exporting}>
                   {exporting ? 'Preparing PDF…' : 'Export to PDF'}
                 </Button>
@@ -207,13 +321,58 @@ function ReadField({ label, value }) {
   )
 }
 
+function ReadList({ label, items }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-ink-900">{label}</p>
+      {items.length ? (
+        <ol className="mt-1 space-y-0.5">
+          {items.map((item, i) => (
+            <li key={i} className="text-sm text-ink-500">{i + 1}. {item}</li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-sm text-ink-400 italic mt-1">Not provided</p>
+      )}
+    </div>
+  )
+}
+
 function ReflectionReadout({ reflection: r }) {
   return (
     <div className="space-y-6">
-      <ReadField label="Most common cases/conditions encountered" value={r.common_cases} />
-      <ReadField label="Skills I was able to observe or practice" value={r.skills_practiced} />
-      <ReadField label="One clinical lesson I learned from this rotation" value={r.clinical_lesson} />
-      <ReadField label="One area I need to improve before clerkship" value={r.improvement_area} />
+      <ReadField label="Brief Case Summary" value={r.brief_summary} />
+
+      <div>
+        <p className="text-sm font-semibold text-ink-900 mb-2">Key History and Physical Examination Findings</p>
+        <div className="space-y-4 pl-0">
+          <ReadField label="Pertinent positives" value={r.pertinent_positives} />
+          <ReadField label="Pertinent negatives" value={r.pertinent_negatives} />
+          <ReadField label="Relevant physical examination findings" value={r.pe_findings} />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold text-ink-900 mb-2">Clinical Reasoning</p>
+        <div className="space-y-4">
+          <ReadList label="Problem list" items={r.problem_list ?? []} />
+          <ReadList label="Differential diagnoses" items={r.differential_diagnoses ?? []} />
+          <ReadField label="Suggested diagnostics/work-up" value={r.workup} />
+          <ReadField label="Initial management priorities" value={r.management_priorities} />
+          <ReadField label="Referral or disposition considerations" value={r.referral_considerations} />
+        </div>
+      </div>
+
+      <ReadList label="Group Learning Points" items={r.group_learning_points ?? []} />
+
+      <div>
+        <p className="text-sm font-semibold text-ink-900 mb-2">Group Reflection</p>
+        <div className="space-y-4">
+          <ReadField label="What did we do well as a group?" value={r.group_did_well} />
+          <ReadField label="What was difficult or challenging?" value={r.group_challenges} />
+          <ReadField label="What should we improve before clerkship?" value={r.group_improvements} />
+        </div>
+      </div>
     </div>
   )
 }

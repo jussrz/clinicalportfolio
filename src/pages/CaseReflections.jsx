@@ -1,75 +1,44 @@
-import { Fragment, useMemo, useState } from 'react'
-import { Button, Field, FieldRow, LoadState, Notice, PageHeader } from '../components/ui'
+import { useMemo, useState } from 'react'
+import { Button, LoadState, Notice, PageHeader } from '../components/ui'
 import CaseReflectionCard from '../components/CaseReflectionCard'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
-import { useSupabaseRecord } from '../lib/useSupabaseRecord'
-import { formatDateRange } from '../lib/date'
 import { roleLabel } from '../lib/caseLog'
 
 function SelectCaseRow({ entry, index, onSelect }) {
-  const [selecting, setSelecting] = useState(false)
-  const [studentName, setStudentName] = useState('')
-  const [yearLevelSection, setYearLevelSection] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  async function handleConfirm() {
+  async function handleSelect() {
     setSaving(true)
     setError(null)
-    const { error: selectError } = await onSelect(entry, {
-      student_name: studentName.trim(),
-      year_level_section: yearLevelSection.trim(),
-    })
+    const { error: selectError } = await onSelect(entry)
     setSaving(false)
-    if (selectError) {
-      setError(selectError.message)
-      return
-    }
-    setSelecting(false)
+    if (selectError) setError(selectError.message)
   }
 
   return (
-    <Fragment>
-      <tr className="border-b border-ink-100 last:border-0">
-        <td className="py-2 pr-2 text-xs text-ink-500">{index + 1}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700 whitespace-nowrap">{entry.date_seen || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.department || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.clinical_area || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.patient_code || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.age_sex || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.chief_complaint || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.working_diagnosis || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{roleLabel(entry) || '—'}</td>
-        <td className="py-2 pr-2 text-xs text-ink-700">{entry.student_assigned || '—'}</td>
-        <td className="py-2 pr-1">
-          <Button variant="outline" onClick={() => setSelecting((v) => !v)}>
-            {selecting ? 'Cancel' : 'Select'}
-          </Button>
-        </td>
-      </tr>
-      {selecting && (
-        <tr className="border-b border-ink-100 bg-ink-50">
-          <td colSpan={11} className="p-4">
-            <FieldRow cols={2}>
-              <Field label="Your Name" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
-              <Field label="Year Level / Section" value={yearLevelSection} onChange={(e) => setYearLevelSection(e.target.value)} />
-            </FieldRow>
-            {error && <p className="text-xs text-red-600 mt-2">Failed to save: {error}</p>}
-            <div className="flex gap-2 mt-3">
-              <Button onClick={handleConfirm} disabled={saving || !studentName.trim() || !yearLevelSection.trim()}>
-                {saving ? 'Saving…' : 'Confirm'}
-              </Button>
-              <Button variant="outline" onClick={() => setSelecting(false)}>Cancel</Button>
-            </div>
-          </td>
-        </tr>
-      )}
-    </Fragment>
+    <tr className="border-b border-ink-100 last:border-0 align-top">
+      <td className="py-2 pr-2 text-xs text-ink-500">{index + 1}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700 whitespace-nowrap">{entry.date_seen || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.department || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.clinical_area || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.patient_code || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.age_sex || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.chief_complaint || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.working_diagnosis || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{roleLabel(entry) || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{entry.student_assigned || '—'}</td>
+      <td className="py-2 pr-1">
+        <Button variant="outline" onClick={handleSelect} disabled={saving}>
+          {saving ? 'Selecting…' : 'Select'}
+        </Button>
+        {error && <p className="text-xs text-red-600 mt-1">Failed: {error}</p>}
+      </td>
+    </tr>
   )
 }
 
 export default function CaseReflections() {
-  const { record: groupMeta } = useSupabaseRecord('group_metadata', 1)
   const { rows: caseLogRows, status: caseLogStatus, error: caseLogError } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
   const { rows: reflections, status, error, update, remove, insert } = useSupabaseTable('case_reflections', { orderBy: 'reflection_no', ascending: true })
   const [justSelectedEntryId, setJustSelectedEntryId] = useState(null)
@@ -87,15 +56,8 @@ export default function CaseReflections() {
     [caseLogRows]
   )
 
-  async function handleSelect(entry, { student_name, year_level_section }) {
-    const result = await insert({
-      case_log_entry_id: entry.id,
-      student_name,
-      year_level_section,
-      group_name: groupMeta.group_name || '',
-      rotation_block: groupMeta.rotation_block || '',
-      inclusive_dates: formatDateRange(groupMeta.inclusive_date_start, groupMeta.inclusive_date_end),
-    })
+  async function handleSelect(entry) {
+    const result = await insert({ case_log_entry_id: entry.id })
     if (!result.error) setJustSelectedEntryId(entry.id)
     return result
   }
@@ -105,7 +67,7 @@ export default function CaseReflections() {
       <PageHeader
         eyebrow="Selected Case Reflections"
         title="Selected Case Reflections"
-        description="Pick cases from the group's Case Log Census for deeper reflection. Student and case details auto-fill from the log and stay locked — only the reflection itself is editable."
+        description="Pick cases from the group's Case Log Census for deeper group discussion. Case details auto-fill from the log and stay locked — only the reflection content is editable."
       />
 
       <div className="space-y-6">
