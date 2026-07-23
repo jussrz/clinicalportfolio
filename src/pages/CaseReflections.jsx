@@ -1,28 +1,103 @@
-import { useState } from 'react'
-import { Button, IconPlus, LoadState, Notice, PageHeader } from '../components/ui'
-import CaseReflectionCard, { CaseReflectionForm, emptyReflection } from '../components/CaseReflectionCard'
+import { Fragment, useMemo, useState } from 'react'
+import { Button, Field, FieldRow, LoadState, Notice, PageHeader } from '../components/ui'
+import CaseReflectionCard from '../components/CaseReflectionCard'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
+import { useSupabaseRecord } from '../lib/useSupabaseRecord'
+import { formatDateRange } from '../lib/date'
+import { roleLabel } from '../lib/caseLog'
 
-export default function CaseReflections() {
-  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_reflections', { orderBy: 'reflection_no', ascending: true })
-  const [adding, setAdding] = useState(false)
-  const [draft, setDraft] = useState(emptyReflection)
+function SelectCaseRow({ entry, index, onSelect }) {
+  const [selecting, setSelecting] = useState(false)
+  const [studentName, setStudentName] = useState('')
+  const [yearLevelSection, setYearLevelSection] = useState('')
   const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState(null)
+  const [error, setError] = useState(null)
 
-  async function handleAddSave() {
+  async function handleConfirm() {
     setSaving(true)
-    setSaveError(null)
-    // reflection_no is assigned server-side (see supabase/schema.sql) so
-    // concurrent adds from different group members can never collide.
-    const { error: insertError } = await insert(draft)
+    setError(null)
+    const { error: selectError } = await onSelect(entry, {
+      student_name: studentName.trim(),
+      year_level_section: yearLevelSection.trim(),
+    })
     setSaving(false)
-    if (insertError) {
-      setSaveError(insertError.message)
+    if (selectError) {
+      setError(selectError.message)
       return
     }
-    setDraft(emptyReflection)
-    setAdding(false)
+    setSelecting(false)
+  }
+
+  return (
+    <Fragment>
+      <tr className="border-b border-ink-100 last:border-0">
+        <td className="py-2 pr-2 text-xs text-ink-500">{index + 1}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700 whitespace-nowrap">{entry.date_seen || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.department || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.clinical_area || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.patient_code || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.age_sex || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.chief_complaint || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.working_diagnosis || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{roleLabel(entry) || '—'}</td>
+        <td className="py-2 pr-2 text-xs text-ink-700">{entry.student_assigned || '—'}</td>
+        <td className="py-2 pr-1">
+          <Button variant="outline" onClick={() => setSelecting((v) => !v)}>
+            {selecting ? 'Cancel' : 'Select'}
+          </Button>
+        </td>
+      </tr>
+      {selecting && (
+        <tr className="border-b border-ink-100 bg-ink-50">
+          <td colSpan={11} className="p-4">
+            <FieldRow cols={2}>
+              <Field label="Your Name" value={studentName} onChange={(e) => setStudentName(e.target.value)} />
+              <Field label="Year Level / Section" value={yearLevelSection} onChange={(e) => setYearLevelSection(e.target.value)} />
+            </FieldRow>
+            {error && <p className="text-xs text-red-600 mt-2">Failed to save: {error}</p>}
+            <div className="flex gap-2 mt-3">
+              <Button onClick={handleConfirm} disabled={saving || !studentName.trim() || !yearLevelSection.trim()}>
+                {saving ? 'Saving…' : 'Confirm'}
+              </Button>
+              <Button variant="outline" onClick={() => setSelecting(false)}>Cancel</Button>
+            </div>
+          </td>
+        </tr>
+      )}
+    </Fragment>
+  )
+}
+
+export default function CaseReflections() {
+  const { record: groupMeta } = useSupabaseRecord('group_metadata', 1)
+  const { rows: caseLogRows, status: caseLogStatus, error: caseLogError } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
+  const { rows: reflections, status, error, update, remove, insert } = useSupabaseTable('case_reflections', { orderBy: 'reflection_no', ascending: true })
+  const [justSelectedEntryId, setJustSelectedEntryId] = useState(null)
+
+  const reflectedEntryIds = useMemo(
+    () => new Set(reflections.map((r) => r.case_log_entry_id).filter(Boolean)),
+    [reflections]
+  )
+  const selectableEntries = useMemo(
+    () => caseLogRows.filter((e) => !reflectedEntryIds.has(e.id)),
+    [caseLogRows, reflectedEntryIds]
+  )
+  const caseLogById = useMemo(
+    () => Object.fromEntries(caseLogRows.map((e) => [e.id, e])),
+    [caseLogRows]
+  )
+
+  async function handleSelect(entry, { student_name, year_level_section }) {
+    const result = await insert({
+      case_log_entry_id: entry.id,
+      student_name,
+      year_level_section,
+      group_name: groupMeta.group_name || '',
+      rotation_block: groupMeta.rotation_block || '',
+      inclusive_dates: formatDateRange(groupMeta.inclusive_date_start, groupMeta.inclusive_date_end),
+    })
+    if (!result.error) setJustSelectedEntryId(entry.id)
+    return result
   }
 
   return (
@@ -30,51 +105,76 @@ export default function CaseReflections() {
       <PageHeader
         eyebrow="Selected Case Reflections"
         title="Selected Case Reflections"
-        description="From the case log census, the group selects important cases for deeper discussion. Aim for at least one selected case reflection per major department, or 3–5 per rotation cycle."
+        description="Pick cases from the group's Case Log Census for deeper reflection. Student and case details auto-fill from the log and stay locked — only the reflection itself is editable."
       />
 
       <div className="space-y-6">
         <Notice>
-          Use patient codes only in every reflection below — never patient names, hospital
-          numbers, or other identifying information.
+          Keep reflections non-identifying — describe cases and conditions in general
+          terms only, never patient names or other identifying information.
         </Notice>
+
+        <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7">
+          <h2 className="text-base font-semibold text-ink-900 mb-1">Select a Case from the Log</h2>
+          <p className="text-sm text-ink-500 mb-4">
+            Suggested minimum: at least 1 reflection per major department, or 3–5 per rotation cycle.
+          </p>
+          <LoadState status={caseLogStatus} error={caseLogError}>
+            {selectableEntries.length === 0 ? (
+              <p className="text-sm text-ink-400 italic py-2">
+                {caseLogRows.length === 0
+                  ? 'No case log entries yet — add cases in Case Log Census first.'
+                  : 'Every logged case already has a reflection.'}
+              </p>
+            ) : (
+              <div className="overflow-x-auto -mx-5 sm:-mx-7 px-5 sm:px-7">
+                <table className="w-full border-collapse min-w-[960px]">
+                  <thead>
+                    <tr>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">No.</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Date Seen</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Department</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Role</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectableEntries.map((entry, i) => (
+                      <SelectCaseRow key={entry.id} entry={entry} index={i} onSelect={handleSelect} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </LoadState>
+        </div>
 
         <LoadState status={status} error={error}>
           <div className="space-y-6">
-            {rows.map((r) => (
+            {reflections.map((r) => (
               <CaseReflectionCard
                 key={r.id}
                 reflection={r}
+                caseEntry={caseLogById[r.case_log_entry_id]}
+                defaultEditing={r.case_log_entry_id === justSelectedEntryId}
                 onSave={(values) => update(r.id, values)}
                 onDelete={() => remove(r.id)}
               />
             ))}
 
-            {rows.length === 0 && !adding && (
+            {reflections.length === 0 && (
               <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
-                <p className="text-sm text-ink-500">No case reflections yet.</p>
+                <p className="text-sm text-ink-500">No case reflections yet — select a case above to start one.</p>
               </div>
             )}
           </div>
         </LoadState>
-
-        {adding ? (
-          <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">
-              New Case Reflection
-            </p>
-            <CaseReflectionForm values={draft} onChange={setDraft} />
-            {saveError && <p className="text-sm text-red-600">Failed to save: {saveError}</p>}
-            <div className="flex gap-2">
-              <Button onClick={handleAddSave} disabled={saving}>{saving ? 'Saving…' : 'Save Reflection'}</Button>
-              <Button variant="outline" onClick={() => { setDraft(emptyReflection); setAdding(false) }}>Cancel</Button>
-            </div>
-          </div>
-        ) : (
-          <Button onClick={() => setAdding(true)}>
-            <IconPlus /> Add Case Reflection
-          </Button>
-        )}
       </div>
     </div>
   )

@@ -30,13 +30,21 @@ create table if not exists group_metadata (
   id int primary key default 1,
   group_name text not null default '',
   rotation_block text not null default '',
-  inclusive_dates text not null default '',
+  inclusive_date_start date,
+  inclusive_date_end date,
   faculty_signature text not null default '',
   faculty_sign_date text not null default '',
   updated_at timestamptz not null default now(),
   constraint group_metadata_single_row check (id = 1)
 );
 insert into group_metadata (id) values (1) on conflict (id) do nothing;
+
+-- Idempotent — covers the case where this table already existed with the
+-- old single free-text `inclusive_dates` column, now split into a proper
+-- start/end date range.
+alter table group_metadata add column if not exists inclusive_date_start date;
+alter table group_metadata add column if not exists inclusive_date_end date;
+alter table group_metadata drop column if exists inclusive_dates;
 
 drop trigger if exists trg_group_metadata_updated_at on group_metadata;
 create trigger trg_group_metadata_updated_at
@@ -62,7 +70,8 @@ create table if not exists case_log_entries (
 );
 
 -- ---------------------------------------------------------------------
--- case_reflections — Selected Case Reflections.
+-- case_reflections — Selected Case Reflections, one row per student's
+-- reflection (matches the school's official "Student Reflection" form).
 -- reflection_no is assigned server-side from a sequence (not computed as
 -- max(reflection_no)+1 on the client) so two people adding a reflection at
 -- nearly the same moment can never collide on the same number.
@@ -72,25 +81,16 @@ create sequence if not exists case_reflections_no_seq;
 create table if not exists case_reflections (
   id uuid primary key default gen_random_uuid(),
   reflection_no int not null default nextval('case_reflections_no_seq'),
-  department text,
-  clinical_area text,
-  patient_code text,
-  age_sex text,
-  students_involved text,
-  student_roles text,
-  case_summary text,
-  pertinent_positives text,
-  pertinent_negatives text,
-  physical_exam_findings text,
-  problem_list text[] not null default '{}',
-  differential_diagnoses text[] not null default '{}',
-  suggested_workup text,
-  management_priorities text,
-  disposition_considerations text,
-  group_learning_points text[] not null default '{}',
-  reflection_went_well text,
-  reflection_challenges text,
-  reflection_improvements text,
+  case_log_entry_id uuid references case_log_entries(id) on delete cascade,
+  student_name text not null default '',
+  year_level_section text not null default '',
+  group_name text not null default '',
+  rotation_block text not null default '',
+  inclusive_dates text not null default '',
+  common_cases text not null default '',
+  skills_practiced text not null default '',
+  clinical_lesson text not null default '',
+  improvement_area text not null default '',
   created_at timestamptz not null default now()
 );
 
@@ -98,6 +98,11 @@ create table if not exists case_reflections (
 -- (created before this sequence default was added) and just needs the
 -- default wired up.
 alter table case_reflections alter column reflection_no set default nextval('case_reflections_no_seq');
+
+-- Idempotent — covers tables created before a reflection was required to
+-- originate from a specific Case Log Census row. A reflection only exists to
+-- discuss its case, so removing the case removes the reflection with it.
+alter table case_reflections add column if not exists case_log_entry_id uuid references case_log_entries(id) on delete cascade;
 
 -- ---------------------------------------------------------------------
 -- individual_contributions
@@ -244,11 +249,26 @@ alter table individual_contributions replica identity full;
 alter table department_notes replica identity full;
 alter table group_metadata replica identity full;
 
-alter publication supabase_realtime add table case_log_entries;
-alter publication supabase_realtime add table case_reflections;
-alter publication supabase_realtime add table individual_contributions;
-alter publication supabase_realtime add table department_notes;
-alter publication supabase_realtime add table group_metadata;
+-- Plain `alter publication ... add table` errors if the table is already a
+-- member (no IF NOT EXISTS support), which breaks re-running this script —
+-- so check membership first, same guarded pattern as the RLS loop above.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'case_log_entries', 'case_reflections', 'individual_contributions',
+    'department_notes', 'group_metadata'
+  ]
+  loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table %I', t);
+    end if;
+  end loop;
+end $$;
 
 -- ---------------------------------------------------------------------
 -- Old architecture cleanup (optional): the earlier single-JSONB-blob

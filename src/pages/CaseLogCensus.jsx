@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
-import { PageHeader, Section, Notice, Field, FieldRow, SelectField, Button, IconPlus, IconTrash, LoadState, SaveStatus } from '../components/ui'
+import { Section, Notice, Field, FieldRow, SelectField, Button, IconPlus, IconTrash, LoadState, SaveStatus } from '../components/ui'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { DEPARTMENT_OPTIONS, CLINICAL_AREA_OPTIONS } from '../data/options'
+import { formatDateRange } from '../lib/date'
+import { underlinedField } from '../lib/pdf'
+import { roleLabel } from '../lib/caseLog'
 
 const STUDENT_ROLE_OPTIONS = ['Observed only', 'Assisted in ___', 'Performed Hx taking', 'Performed PE']
 
@@ -70,25 +73,60 @@ function CaseLogFields({ values, onChange }) {
   )
 }
 
-function exportCsv(rows) {
-  const columns = [
-    'date_seen', 'department', 'clinical_area', 'patient_code', 'age_sex',
-    'chief_complaint', 'working_diagnosis', 'student_role', 'student_role_detail', 'student_assigned',
-  ]
-  const header = columns.join(',')
-  const lines = rows.map((row) =>
-    columns
-      .map((col) => `"${String(row[col] ?? '').replace(/"/g, '""')}"`)
-      .join(',')
-  )
-  const csv = [header, ...lines].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'case_log_census.csv'
-  a.click()
-  URL.revokeObjectURL(url)
+async function exportPdf(rows, record) {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')])
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+  const pageWidth = doc.internal.pageSize.getWidth()
+  let y = 42
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(13)
+  doc.text('CLINICAL ROTATION CASE LOG CENSUS', pageWidth / 2, y, { align: 'center' })
+  y += 16
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(10)
+  doc.text('USM College of Medicine', pageWidth / 2, y, { align: 'center' })
+  y += 14
+  doc.text('Clinical Rotation – SY 2026–2027', pageWidth / 2, y, { align: 'center' })
+  y += 26
+
+  doc.setFontSize(10)
+  underlinedField(doc, 'Group:', record.group_name || '', 40, y, 260)
+  y += 18
+  underlinedField(doc, 'Rotation Block:', record.rotation_block || '', 40, y, 260)
+  y += 18
+  underlinedField(doc, 'Inclusive Dates:', formatDateRange(record.inclusive_date_start, record.inclusive_date_end), 40, y, 320)
+  y += 22
+
+  autoTable(doc, {
+    startY: y,
+    head: [[
+      'No.', 'Date Seen', 'Department', 'Clinical area', 'Patient Code', 'Age/Sex',
+      'Chief complaint/Reason for Consult', 'Working Diagnosis', 'Student Role', 'Student Assigned',
+    ]],
+    body: rows.map((row, i) => [
+      i + 1,
+      row.date_seen || '',
+      row.department || '',
+      row.clinical_area || '',
+      row.patient_code || '',
+      row.age_sex || '',
+      row.chief_complaint || '',
+      row.working_diagnosis || '',
+      roleLabel(row),
+      row.student_assigned || '',
+    ]),
+    styles: { fontSize: 8, cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.5, textColor: [0, 0, 0] },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
+    theme: 'grid',
+  })
+
+  const finalY = doc.lastAutoTable.finalY + 40
+  doc.setFontSize(10)
+  underlinedField(doc, 'Faculty/Preceptor Signature:', '', 40, finalY, 320)
+  underlinedField(doc, 'Date:', '', 40, finalY + 26, 220)
+
+  doc.save('case_log_census.pdf')
 }
 
 function CaseLogRow({ row, index, onUpdate, onDelete }) {
@@ -125,20 +163,17 @@ function CaseLogRow({ row, index, onUpdate, onDelete }) {
 
   return (
     <tr className="border-b border-ink-100 last:border-0">
-      <td className="py-2.5 pr-3 text-sm text-ink-500">{index + 1}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700 whitespace-nowrap">{row.date_seen || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.department || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.clinical_area || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.patient_code || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.age_sex || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.chief_complaint || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.working_diagnosis || '—'}</td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">
-        {row.student_role || '—'}
-        {row.student_role_detail && <span className="text-ink-400"> ({row.student_role_detail})</span>}
-      </td>
-      <td className="py-2.5 pr-3 text-sm text-ink-700">{row.student_assigned || '—'}</td>
-      <td className="py-2.5 pr-1">
+      <td className="py-2 pr-2 text-xs text-ink-500">{index + 1}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700 whitespace-nowrap">{row.date_seen || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.department || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.clinical_area || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.patient_code || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.age_sex || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.chief_complaint || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.working_diagnosis || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{roleLabel(row) || '—'}</td>
+      <td className="py-2 pr-2 text-xs text-ink-700">{row.student_assigned || '—'}</td>
+      <td className="py-2 pr-1">
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setEditing(true)} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
             Edit
@@ -160,6 +195,16 @@ export default function CaseLogCensus() {
   const [addError, setAddError] = useState(null)
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
+  const [exporting, setExporting] = useState(false)
+
+  async function handleExportPdf() {
+    setExporting(true)
+    try {
+      await exportPdf(sortedRows, record)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const sortedRows = useMemo(() => {
     if (!sortKey) return rows
@@ -195,7 +240,7 @@ export default function CaseLogCensus() {
 
   const sortHeader = (label, key) => (
     <th
-      className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3 whitespace-nowrap cursor-pointer select-none hover:text-ink-700"
+      className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2 whitespace-nowrap cursor-pointer select-none hover:text-ink-700"
       onClick={() => toggleSort(key)}
     >
       {label} {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
@@ -204,25 +249,49 @@ export default function CaseLogCensus() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow="Group Case Log Census"
-        title="Group Case Log Census"
-        description="A summary of cases seen, observed, discussed, or participated in during hospital or community rotations."
-      />
+      <div className="text-center mb-8">
+        <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-3">
+          Group Case Log Census
+        </p>
+        <h1 className="text-xl sm:text-2xl font-bold text-ink-900 uppercase tracking-wide">
+          Clinical Rotation Case Log Census
+        </h1>
+        <p className="text-[15px] text-ink-600 mt-1">USM College of Medicine</p>
+        <p className="text-[15px] text-ink-600">Clinical Rotation – SY 2026–2027</p>
+      </div>
 
       <div className="space-y-6">
         <Section title="Header Information">
           <LoadState status={metaStatus === 'error' ? 'error' : 'ready'} error="Couldn't load group information.">
             <div className="space-y-4">
-              <FieldRow cols={3}>
+              <FieldRow cols={2}>
                 <Field label="Group" value={record.group_name ?? ''} onChange={(e) => setField('group_name', e.target.value)} />
                 <Field label="Rotation Block" value={record.rotation_block ?? ''} onChange={(e) => setField('rotation_block', e.target.value)} />
-                <Field label="Inclusive Dates" value={record.inclusive_dates ?? ''} onChange={(e) => setField('inclusive_dates', e.target.value)} />
               </FieldRow>
-              <FieldRow>
-                <Field label="Faculty/Preceptor Signature" value={record.faculty_signature ?? ''} onChange={(e) => setField('faculty_signature', e.target.value)} />
-                <Field type="date" label="Date" value={record.faculty_sign_date ?? ''} onChange={(e) => setField('faculty_sign_date', e.target.value)} />
-              </FieldRow>
+              <div>
+                <FieldRow cols={2}>
+                  <Field
+                    type="date"
+                    label="Inclusive Dates — From"
+                    value={record.inclusive_date_start ?? ''}
+                    onChange={(e) => setField('inclusive_date_start', e.target.value || null)}
+                  />
+                  <Field
+                    type="date"
+                    label="Inclusive Dates — To"
+                    value={record.inclusive_date_end ?? ''}
+                    onChange={(e) => setField('inclusive_date_end', e.target.value || null)}
+                  />
+                </FieldRow>
+                {(record.inclusive_date_start || record.inclusive_date_end) && (
+                  <p className="text-sm text-ink-500 mt-2">
+                    {formatDateRange(record.inclusive_date_start, record.inclusive_date_end)}
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-ink-400">
+                Faculty/Preceptor Signature and Date are signed by hand on the exported PDF, not entered here.
+              </p>
               <div className="h-4"><SaveStatus state={saveState} /></div>
             </div>
           </LoadState>
@@ -243,8 +312,8 @@ export default function CaseLogCensus() {
 
         <Section title={`Case Log (${rows.length} ${rows.length === 1 ? 'entry' : 'entries'})`}>
           <div className="flex justify-end mb-3">
-            <Button variant="outline" onClick={() => exportCsv(sortedRows)} disabled={rows.length === 0}>
-              Export to CSV
+            <Button variant="outline" onClick={handleExportPdf} disabled={rows.length === 0 || exporting}>
+              {exporting ? 'Preparing PDF…' : 'Export to PDF'}
             </Button>
           </div>
           <LoadState status={status} error={error}>
@@ -252,19 +321,19 @@ export default function CaseLogCensus() {
               <p className="text-sm text-ink-400 italic py-4">No entries yet — add the group's first case above.</p>
             ) : (
               <div className="overflow-x-auto -mx-5 sm:-mx-7 px-5 sm:px-7">
-                <table className="w-full table-fixed border-collapse min-w-[1200px]">
+                <table className="w-full border-collapse min-w-[880px]">
                   <thead>
                     <tr>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">No.</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">No.</th>
                       {sortHeader('Date Seen', 'date_seen')}
                       {sortHeader('Department', 'department')}
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Clinical Area</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Patient Code</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Age/Sex</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Chief Complaint</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Working Dx</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Student Role</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-3">Student Assigned</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Role</th>
+                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
                       <th className="border-b border-ink-200 pb-2" />
                     </tr>
                   </thead>
