@@ -240,7 +240,7 @@ export default function CaseLogCensus() {
 
   const sortHeader = (label, key) => (
     <th
-      className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2 whitespace-nowrap cursor-pointer select-none hover:text-ink-700"
+      className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2 whitespace-nowrap cursor-pointer select-none hover:text-brand-700"
       onClick={() => toggleSort(key)}
     >
       {label} {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
@@ -324,16 +324,16 @@ export default function CaseLogCensus() {
                 <table className="w-full border-collapse min-w-[880px]">
                   <thead>
                     <tr>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">No.</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">No.</th>
                       {sortHeader('Date Seen', 'date_seen')}
                       {sortHeader('Department', 'department')}
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Role</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Role</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
                       <th className="border-b border-ink-200 pb-2" />
                     </tr>
                   </thead>

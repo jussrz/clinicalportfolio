@@ -76,8 +76,8 @@ async function exportReflectionPdf(reflection) {
 function LockedField({ label, value }) {
   return (
     <div>
-      <p className="field-label">{label}</p>
-      <p className="text-[15px] text-ink-700">{value || <span className="text-ink-400 italic">—</span>}</p>
+      <p className="text-sm font-semibold text-ink-900">{label}</p>
+      <p className="text-sm text-ink-500 mt-0.5">{value || <span className="text-ink-400 italic">—</span>}</p>
     </div>
   )
 }
@@ -201,8 +201,8 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
 function ReadField({ label, value }) {
   return (
     <div>
-      <p className="field-label">{label}</p>
-      <p className="text-[15px] text-ink-700 whitespace-pre-line">{value || <span className="text-ink-400 italic">Not provided</span>}</p>
+      <p className="text-sm font-semibold text-ink-900">{label}</p>
+      <p className="text-sm text-ink-500 whitespace-pre-line mt-1">{value || <span className="text-ink-400 italic">Not provided</span>}</p>
     </div>
   )
 }

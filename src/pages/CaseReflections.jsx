@@ -131,17 +131,17 @@ export default function CaseReflections() {
                 <table className="w-full border-collapse min-w-[960px]">
                   <thead>
                     <tr>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">No.</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Date Seen</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Department</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Role</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
-                      <th className="text-left text-xs font-semibold uppercase tracking-wide text-ink-500 border-b border-ink-200 pb-2 pr-2">Action</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">No.</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Date Seen</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Department</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Role</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
+                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Action</th>
                     </tr>
                   </thead>
                   <tbody>
