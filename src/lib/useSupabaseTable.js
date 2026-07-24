@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { isSupabaseConfigured, supabase } from './supabase'
 
 /**
@@ -10,6 +10,11 @@ import { isSupabaseConfigured, supabase } from './supabase'
  *   status: 'loading' | 'ready' | 'error'
  */
 export function useSupabaseTable(table, { orderBy = 'created_at', ascending = true } = {}) {
+  // Supabase dedupes channels by name, so two hook instances bound to the
+  // same table (e.g. a page's own fetch plus useCaseStats fetching the same
+  // table) would otherwise fight over one channel and throw on the second
+  // subscribe(). A per-instance id keeps every mount on its own channel.
+  const instanceId = useId()
   const [rows, setRows] = useState([])
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState(null)
@@ -39,12 +44,12 @@ export function useSupabaseTable(table, { orderBy = 'created_at', ascending = tr
     if (!isSupabaseConfigured) return
 
     const channel = supabase
-      .channel(`${table}_list`)
+      .channel(`${table}_list_${instanceId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table }, () => refetch())
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [table, refetch])
+  }, [table, refetch, instanceId])
 
   const insert = useCallback(
     async (row) => {

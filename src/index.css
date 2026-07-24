@@ -2,28 +2,29 @@
 
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
 
-  --color-brand-50: #f0fdfa;
-  --color-brand-100: #ccfbf1;
-  --color-brand-200: #99f6e4;
-  --color-brand-300: #5eead4;
-  --color-brand-400: #2dd4bf;
-  --color-brand-500: #14b8a6;
-  --color-brand-600: #0d9488;
-  --color-brand-700: #0f766e;
-  --color-brand-800: #115e59;
-  --color-brand-900: #134e4a;
+  --color-brand-50: #f2faf4;
+  --color-brand-100: #e0f5e5;
+  --color-brand-200: #bfe8c9;
+  --color-brand-300: #93d6a4;
+  --color-brand-400: #62bd79;
+  --color-brand-500: #3fa25a;
+  --color-brand-600: #2f8447;
+  --color-brand-700: #266a3a;
+  --color-brand-800: #20552f;
+  --color-brand-900: #1b4527;
 
-  --color-ink-50: #f8fafc;
-  --color-ink-100: #f1f5f9;
-  --color-ink-200: #e2e8f0;
-  --color-ink-300: #cbd5e1;
-  --color-ink-400: #94a3b8;
-  --color-ink-500: #64748b;
-  --color-ink-600: #475569;
-  --color-ink-700: #334155;
-  --color-ink-800: #1e293b;
-  --color-ink-900: #0f1c2e;
+  --color-ink-50: #f6fbf8;
+  --color-ink-100: #eef6f2;
+  --color-ink-200: #dbebe3;
+  --color-ink-300: #c3d9ce;
+  --color-ink-400: #86aa97;
+  --color-ink-500: #5c796a;
+  --color-ink-600: #40594c;
+  --color-ink-700: #2d4639;
+  --color-ink-800: #192d22;
+  --color-ink-900: #0c2015;
 }
 
 html {
@@ -34,8 +35,32 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   color: var(--color-ink-800);
-  background-color: var(--color-ink-50);
+  background-color: #eef6f1;
+  background-image:
+    radial-gradient(ellipse 900px 500px at 8% -10%, rgba(63, 162, 90, 0.10), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(63, 162, 90, 0.07), transparent 55%);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Soft, brand-tinted elevation for cards (Section component). Warmer than a
+   plain gray shadow so white surfaces feel like part of the same palette. */
+.card-shadow {
+  box-shadow: 0 1px 2px rgba(20, 60, 35, 0.04), 0 8px 24px -12px rgba(20, 60, 35, 0.14);
+}
+
+/* Warmer, larger elevation for showcase Sections (narrative/reflection
+   content), so they read as a step up from plain data-entry cards. */
+.card-shadow-lg {
+  box-shadow: 0 2px 6px rgba(20, 60, 35, 0.06), 0 28px 52px -20px rgba(20, 60, 35, 0.22);
+}
+
+.card-shadow-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-shadow-hover:hover {
+  box-shadow: 0 4px 8px rgba(20, 60, 35, 0.05), 0 16px 32px -14px rgba(20, 60, 35, 0.18);
+  transform: translateY(-1px);
 }
 
 /* Reusable form primitives ------------------------------------------- */
@@ -88,11 +113,57 @@ body {
   min-height: 3rem;
 }
 
+/* Data tables (Table/Th in ui.jsx) --------------------------------------- */
+
+.data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+}
+
+.data-table thead th {
+  background-color: var(--color-brand-50);
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-600);
+  padding: 0.75rem 0.875rem;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-ink-200);
+}
+
+.data-table tbody td {
+  padding: 0.75rem 0.875rem;
+  color: var(--color-ink-700);
+  border-bottom: 1px solid var(--color-ink-100);
+  vertical-align: top;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr:nth-child(even) td {
+  background-color: color-mix(in srgb, var(--color-ink-50) 60%, white);
+}
+
+.data-table tbody tr:hover td {
+  background-color: color-mix(in srgb, var(--color-brand-50) 55%, white);
+}
+
+/* Row-action cell (Edit/Delete) gets a divider so it reads as a distinct
+   control column, not just more data. */
+.data-table tbody td:last-child {
+  border-left: 1px solid var(--color-ink-100);
+}
+
 .sidebar-scroll::-webkit-scrollbar {
   width: 5px;
 }
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background-color: var(--color-ink-700);
+  background-color: rgba(255, 255, 255, 0.14);
   border-radius: 3px;
 }
 

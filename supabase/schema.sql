@@ -245,6 +245,34 @@ create trigger trg_group_reflections_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- rotation_overview — single row. Objectives/schedule/topics/goals set by
+-- the clinical rotation program; one column per department objectives
+-- field (obj_<slug, hyphens as underscores>), slugs matching
+-- src/data/departments.js: pediatrics, family-community-medicine,
+-- internal-medicine, surgery, obstetrics-gynecology.
+-- ---------------------------------------------------------------------
+create table if not exists rotation_overview (
+  id int primary key default 1,
+  general_objectives text not null default '',
+  obj_pediatrics text not null default '[Insert Pediatrics rotation-specific objectives here]',
+  obj_family_community_medicine text not null default '[Insert Family & Community Medicine rotation-specific objectives here]',
+  obj_internal_medicine text not null default '[Insert Internal Medicine rotation-specific objectives here]',
+  obj_surgery text not null default '[Insert Surgery rotation-specific objectives here]',
+  obj_obstetrics_gynecology text not null default '[Insert Obstetrics & Gynecology rotation-specific objectives here]',
+  schedule text not null default '[Insert clinical rotation schedule or timeline here]',
+  case_topics text not null default '[Insert assigned case topics per rotation cycle here]',
+  learning_goals text not null default '[Insert group learning goals here]',
+  updated_at timestamptz not null default now(),
+  constraint rotation_overview_single_row check (id = 1)
+);
+insert into rotation_overview (id) values (1) on conflict (id) do nothing;
+
+drop trigger if exists trg_rotation_overview_updated_at on rotation_overview;
+create trigger trg_rotation_overview_updated_at
+  before update on rotation_overview
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security — open read/write for anon (small trusted group,
 -- per the brief). Every table gets the same four permissive policies.
 -- ---------------------------------------------------------------------
@@ -255,7 +283,8 @@ begin
   foreach t in array array[
     'group_metadata', 'case_log_entries', 'case_reflections',
     'individual_contributions', 'department_notes', 'case_presentation',
-    'clinical_skills', 'feedback_action_plan', 'group_reflections'
+    'clinical_skills', 'feedback_action_plan', 'group_reflections',
+    'rotation_overview'
   ]
   loop
     execute format('alter table %I enable row level security', t);

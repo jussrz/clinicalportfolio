@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Area, Button, IconTrash, ListField } from './ui'
+import Pullquote from './Pullquote'
 import { underlinedField } from '../lib/pdf'
 import { roleLabel } from '../lib/caseLog'
 
@@ -180,11 +181,43 @@ async function exportReflectionPdf(reflection, caseEntry) {
   doc.save(`selected_case_reflection_${reflection.reflection_no}.pdf`)
 }
 
-function LockedField({ label, value }) {
+/** Case metadata pulled from the linked Case Log Census entry, rendered as
+ * a magazine-byline strip (label: value · label: value) rather than a form
+ * grid, since it's locked, reference-only context for the reflection below. */
+function LockedStrip({ caseEntry }) {
+  const items = [
+    ['Department', caseEntry?.department],
+    ['Clinical Area', caseEntry?.clinical_area],
+    ['Patient Code', caseEntry?.patient_code],
+    ['Age/Sex', caseEntry?.age_sex],
+    ['Student/s Involved', caseEntry?.student_assigned],
+    ['Student Role/s', caseEntry ? roleLabel(caseEntry) : ''],
+  ].filter(([, value]) => value)
+
+  if (!items.length) {
+    return <p className="text-sm text-ink-400 italic">No linked case log entry yet.</p>
+  }
+
   return (
-    <div>
-      <p className="text-sm font-semibold text-ink-900">{label}</p>
-      <p className="text-sm text-ink-500 mt-0.5">{value || <span className="text-ink-400 italic">—</span>}</p>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px] text-ink-600">
+      {items.map(([label, value], i) => (
+        <span key={label} className="inline-flex items-center gap-2.5">
+          {i > 0 && <span className="text-ink-200">·</span>}
+          <span className="text-ink-400">{label}:</span> {value}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** Small-caps eyebrow + accent rule marking a subsection within the read-only
+ * reflection readout — mirrors PageHeader's eyebrow so a reflection reads
+ * with the same visual grammar as the rest of the app's headline treatment. */
+function SectionLabel({ children }) {
+  return (
+    <div className="flex items-center gap-2 mb-3">
+      <span className="w-5 h-[3px] rounded-full bg-brand-500" />
+      <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">{children}</p>
     </div>
   )
 }
@@ -243,7 +276,8 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
   }
 
   return (
-    <div className="bg-white border border-ink-200 rounded-2xl shadow-sm overflow-hidden">
+    <div className="relative bg-white border border-ink-200/60 rounded-2xl card-shadow-lg overflow-hidden">
+      <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-400 via-brand-600 to-brand-400" />
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -273,17 +307,7 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
       {open && (
         <div className="px-5 sm:px-7 pb-7 pt-1 border-t border-ink-100 space-y-6">
           <div className="pt-6">
-            <p className="text-xs font-semibold uppercase tracking-widest text-ink-400 mb-3">
-              Case details — auto-filled from the log, locked
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <LockedField label="Department" value={caseEntry?.department} />
-              <LockedField label="Clinical Area" value={caseEntry?.clinical_area} />
-              <LockedField label="Patient Code" value={caseEntry?.patient_code} />
-              <LockedField label="Age/Sex" value={caseEntry?.age_sex} />
-              <LockedField label="Student/s Involved" value={caseEntry?.student_assigned} />
-              <LockedField label="Student Role/s" value={caseEntry ? roleLabel(caseEntry) : ''} />
-            </div>
+            <LockedStrip caseEntry={caseEntry} />
           </div>
 
           {editing ? (
@@ -338,14 +362,46 @@ function ReadList({ label, items }) {
   )
 }
 
+/** Group Learning Points read out as a highlighted brand-tinted callout
+ * rather than a plain numbered list — these are the takeaways a reviewer
+ * is most likely to scan for, so they get more visual weight. */
+function ReadCallout({ label, items }) {
+  return (
+    <div>
+      <SectionLabel>{label}</SectionLabel>
+      {items.length ? (
+        <ul className="rounded-xl border border-brand-200 bg-brand-50/60 p-4 sm:p-5 space-y-2.5">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-ink-800">
+              <span className="shrink-0 grid place-items-center w-5 h-5 mt-0.5 rounded-full bg-brand-600 text-white text-[10px] font-semibold">
+                {i + 1}
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-ink-400 italic">Not provided</p>
+      )}
+    </div>
+  )
+}
+
 function ReflectionReadout({ reflection: r }) {
   return (
-    <div className="space-y-6">
-      <ReadField label="Brief Case Summary" value={r.brief_summary} />
+    <div className="space-y-7">
+      <div>
+        <SectionLabel>Brief Case Summary</SectionLabel>
+        {r.brief_summary ? (
+          <Pullquote>{r.brief_summary}</Pullquote>
+        ) : (
+          <p className="text-sm text-ink-400 italic">Not provided</p>
+        )}
+      </div>
 
       <div>
-        <p className="text-sm font-semibold text-ink-900 mb-2">Key History and Physical Examination Findings</p>
-        <div className="space-y-4 pl-0">
+        <SectionLabel>Key History and Physical Examination Findings</SectionLabel>
+        <div className="space-y-4">
           <ReadField label="Pertinent positives" value={r.pertinent_positives} />
           <ReadField label="Pertinent negatives" value={r.pertinent_negatives} />
           <ReadField label="Relevant physical examination findings" value={r.pe_findings} />
@@ -353,7 +409,7 @@ function ReflectionReadout({ reflection: r }) {
       </div>
 
       <div>
-        <p className="text-sm font-semibold text-ink-900 mb-2">Clinical Reasoning</p>
+        <SectionLabel>Clinical Reasoning</SectionLabel>
         <div className="space-y-4">
           <ReadList label="Problem list" items={r.problem_list ?? []} />
           <ReadList label="Differential diagnoses" items={r.differential_diagnoses ?? []} />
@@ -363,10 +419,10 @@ function ReflectionReadout({ reflection: r }) {
         </div>
       </div>
 
-      <ReadList label="Group Learning Points" items={r.group_learning_points ?? []} />
+      <ReadCallout label="Group Learning Points" items={r.group_learning_points ?? []} />
 
       <div>
-        <p className="text-sm font-semibold text-ink-900 mb-2">Group Reflection</p>
+        <SectionLabel>Group Reflection</SectionLabel>
         <div className="space-y-4">
           <ReadField label="What did we do well as a group?" value={r.group_did_well} />
           <ReadField label="What was difficult or challenging?" value={r.group_challenges} />

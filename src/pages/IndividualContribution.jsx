@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { Area, Button, Field, IconPlus, IconTrash, LoadState, PageHeader, Section } from '../components/ui'
+import { Area, Button, Field, IconPlus, IconTrash, LoadState, Section } from '../components/ui'
+import PageHero from '../components/PageHero'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
+import { exportPromptsPdf } from '../lib/pdf'
+import { GROUP_NAME } from '../data/group'
 
 const emptyRow = { student_name: '', contribution_summary: '' }
 
@@ -28,7 +31,7 @@ function ContributionRow({ row, onUpdate, onDelete }) {
         <Field label="Student Name" value={draft.student_name} onChange={(e) => setDraft({ ...draft, student_name: e.target.value })} />
         <Area label="Contribution Summary" value={draft.contribution_summary} onChange={(e) => setDraft({ ...draft, contribution_summary: e.target.value })} minRows={3} />
         <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? 'Submitting…' : 'Submit'}</Button>
           <Button variant="outline" onClick={() => { setDraft(row); setEditing(false) }}>Cancel</Button>
         </div>
       </div>
@@ -38,7 +41,7 @@ function ContributionRow({ row, onUpdate, onDelete }) {
   return (
     <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm font-semibold text-ink-800">{row.student_name || 'Unnamed student'}</p>
+        <p className="font-display text-[15px] font-semibold text-ink-800">{row.student_name || 'Unnamed student'}</p>
         <div className="flex items-center gap-1 shrink-0">
           <button type="button" onClick={() => { setDraft(row); setEditing(true) }} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
             Edit
@@ -60,6 +63,7 @@ export default function IndividualContribution() {
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState(emptyRow)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   async function handleAdd() {
     setSaving(true)
@@ -71,9 +75,23 @@ export default function IndividualContribution() {
     }
   }
 
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportPromptsPdf({
+        title: `${GROUP_NAME} Individual Contribution`,
+        prompts: rows.map((row) => ({ label: row.student_name || 'Unnamed student', value: row.contribution_summary })),
+        filename: 'group_individual_contribution.pdf',
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div>
-      <PageHeader
+      <PageHero
+        compact
         eyebrow="Individual Contribution"
         title="Individual Contribution"
         description="Although the portfolio is submitted as a group, each student's contributions are documented here."
@@ -90,6 +108,13 @@ export default function IndividualContribution() {
                 <p className="text-sm text-ink-500">No students added yet.</p>
               </div>
             )}
+            {rows.length > 0 && (
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={handleExport} disabled={exporting}>
+                  {exporting ? 'Preparing PDF…' : 'Export to PDF'}
+                </Button>
+              </div>
+            )}
           </div>
         </LoadState>
 
@@ -99,7 +124,7 @@ export default function IndividualContribution() {
               <Field label="Student Name" value={draft.student_name} onChange={(e) => setDraft({ ...draft, student_name: e.target.value })} />
               <Area label="Contribution Summary" value={draft.contribution_summary} onChange={(e) => setDraft({ ...draft, contribution_summary: e.target.value })} minRows={3} />
               <div className="flex gap-2">
-                <Button onClick={handleAdd} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                <Button onClick={handleAdd} disabled={saving}>{saving ? 'Submitting…' : 'Submit'}</Button>
                 <Button variant="outline" onClick={() => { setDraft(emptyRow); setAdding(false) }}>Cancel</Button>
               </div>
             </div>

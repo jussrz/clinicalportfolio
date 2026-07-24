@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react'
-import { Section, Notice, Field, FieldRow, SelectField, Button, IconPlus, IconTrash, LoadState, SaveStatus } from '../components/ui'
+import { useEffect, useMemo, useState } from 'react'
+import { Section, Notice, Field, FieldRow, SelectField, Button, IconPlus, LoadState, Modal, SaveStatus, Table, Th } from '../components/ui'
+import PageHero from '../components/PageHero'
+import BarBreakdown from '../components/BarBreakdown'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
+import { useCaseStats } from '../lib/useCaseStats'
 import { DEPARTMENT_OPTIONS, CLINICAL_AREA_OPTIONS } from '../data/options'
 import { formatDateRange } from '../lib/date'
 import { underlinedField } from '../lib/pdf'
@@ -129,73 +132,115 @@ async function exportPdf(rows, record) {
   doc.save('case_log_census.pdf')
 }
 
-function CaseLogRow({ row, index, onUpdate, onDelete }) {
+function CaseLogRow({ row, index, onSelect }) {
+  return (
+    <tr onClick={() => onSelect(row)} className="cursor-pointer">
+      <td className="text-ink-400">{index + 1}</td>
+      <td className="whitespace-nowrap">{row.date_seen || '—'}</td>
+      <td>{row.department || '—'}</td>
+      <td>{row.clinical_area || '—'}</td>
+      <td>{row.patient_code || '—'}</td>
+      <td>{row.age_sex || '—'}</td>
+      <td>{row.chief_complaint || '—'}</td>
+      <td>{row.working_diagnosis || '—'}</td>
+      <td className="whitespace-nowrap">{roleLabel(row) || '—'}</td>
+      <td>{row.student_assigned || '—'}</td>
+    </tr>
+  )
+}
+
+function DetailField({ label, value }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{label}</p>
+      <p className="text-sm text-ink-800 mt-1">{value || <span className="text-ink-300 italic">—</span>}</p>
+    </div>
+  )
+}
+
+/** View/edit modal for a single case entry, opened by clicking its table
+ * row. Edit swaps the same modal's body into the CaseLogFields form in
+ * place (Save/Cancel) rather than opening a second modal. "Export to PDF"
+ * is the page's existing whole-census export, unchanged. */
+function CaseLogDetailModal({ entry, onSave, onDelete, onClose, onExport, exporting }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(row)
+  const [draft, setDraft] = useState(entry ?? emptyEntry)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  useEffect(() => {
+    setDraft(entry ?? emptyEntry)
+    setEditing(false)
+    setSaveError(null)
+  }, [entry])
 
   async function handleSave() {
     setSaving(true)
-    const { error } = await onUpdate(row.id, normalizeEntry(draft))
+    setSaveError(null)
+    const { error } = await onSave(normalizeEntry(draft))
     setSaving(false)
-    if (!error) setEditing(false)
+    if (error) {
+      setSaveError(error.message)
+      return
+    }
+    setEditing(false)
   }
 
   function handleDelete() {
     if (window.confirm('Delete this case log entry? This cannot be undone.')) {
-      onDelete(row.id)
+      onDelete()
     }
   }
 
-  if (editing) {
-    return (
-      <tr className="border-b border-ink-100 bg-ink-50">
-        <td colSpan={11} className="p-4">
-          <CaseLogFields values={draft} onChange={setDraft} />
-          <div className="flex gap-2 mt-4">
-            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-            <Button variant="outline" onClick={() => { setDraft(row); setEditing(false) }}>Cancel</Button>
-          </div>
-        </td>
-      </tr>
-    )
-  }
-
   return (
-    <tr className="border-b border-ink-100 last:border-0">
-      <td className="py-2 pr-2 text-xs text-ink-500">{index + 1}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700 whitespace-nowrap">{row.date_seen || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.department || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.clinical_area || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.patient_code || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.age_sex || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.chief_complaint || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.working_diagnosis || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{roleLabel(row) || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{row.student_assigned || '—'}</td>
-      <td className="py-2 pr-1">
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => setEditing(true)} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
-            Edit
-          </button>
-          <button type="button" onClick={handleDelete} aria-label="Delete row" className="w-7 h-7 grid place-items-center rounded-lg text-ink-300 hover:text-red-600 hover:bg-red-50 transition-colors">
-            <IconTrash />
-          </button>
+    <Modal open={Boolean(entry)} onClose={onClose} title={editing ? 'Edit Case Entry' : 'Case Entry'}>
+      {editing ? (
+        <div className="space-y-6">
+          <CaseLogFields values={draft} onChange={setDraft} />
+          {saveError && <p className="text-sm text-red-600">Failed to save: {saveError}</p>}
+          <div className="flex gap-2">
+            <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+            <Button variant="outline" onClick={() => { setDraft(entry ?? emptyEntry); setEditing(false) }}>Cancel</Button>
+          </div>
         </div>
-      </td>
-    </tr>
+      ) : (
+        entry && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <DetailField label="Date Seen" value={entry.date_seen} />
+              <DetailField label="Department" value={entry.department} />
+              <DetailField label="Clinical Area" value={entry.clinical_area} />
+              <DetailField label="Patient Code" value={entry.patient_code} />
+              <DetailField label="Age/Sex" value={entry.age_sex} />
+              <DetailField label="Student Assigned" value={entry.student_assigned} />
+              <DetailField label="Student Role" value={roleLabel(entry)} />
+            </div>
+            <DetailField label="Chief Complaint / Reason for Consult" value={entry.chief_complaint} />
+            <DetailField label="Working Diagnosis" value={entry.working_diagnosis} />
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-ink-100">
+              <Button variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+              <Button variant="danger" onClick={handleDelete}>Delete</Button>
+            </div>
+          </div>
+        )
+      )}
+    </Modal>
   )
 }
 
 export default function CaseLogCensus() {
   const { record, status: metaStatus, saveState, setField } = useSupabaseRecord('group_metadata', 1)
   const { rows, status, error, insert, update, remove } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
+  const stats = useCaseStats()
+  const [addOpen, setAddOpen] = useState(false)
   const [newEntry, setNewEntry] = useState(emptyEntry)
   const [adding, setAdding] = useState(false)
   const [addError, setAddError] = useState(null)
   const [sortKey, setSortKey] = useState(null)
   const [sortDir, setSortDir] = useState('asc')
   const [exporting, setExporting] = useState(false)
+  const [selectedRowId, setSelectedRowId] = useState(null)
+  const selectedRow = rows.find((r) => r.id === selectedRowId) ?? null
 
   async function handleExportPdf() {
     setExporting(true)
@@ -238,116 +283,143 @@ export default function CaseLogCensus() {
     setNewEntry(emptyEntry)
   }
 
-  const sortHeader = (label, key) => (
-    <th
-      className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2 whitespace-nowrap cursor-pointer select-none hover:text-brand-700"
-      onClick={() => toggleSort(key)}
-    >
-      {label} {sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-    </th>
-  )
+  async function handleUpdateSelected(patch) {
+    return update(selectedRow.id, patch)
+  }
+
+  async function handleDeleteSelected() {
+    await remove(selectedRow.id)
+    setSelectedRowId(null)
+  }
+
+  const sortState = { key: sortKey, dir: sortDir }
 
   return (
     <div>
-      <div className="text-center mb-8">
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-3">
-          Group Case Log Census
-        </p>
-        <h1 className="text-xl sm:text-2xl font-bold text-ink-900 uppercase tracking-wide">
-          Clinical Rotation Case Log Census
-        </h1>
-        <p className="text-[15px] text-ink-600 mt-1">USM College of Medicine</p>
-        <p className="text-[15px] text-ink-600">Clinical Rotation – SY 2026–2027</p>
-      </div>
+      <PageHero
+        compact
+        eyebrow="Group Case Log Census"
+        title="Clinical Rotation Case Log Census"
+        description="USM College of Medicine · Clinical Rotation – SY 2026–2027"
+      />
 
       <div className="space-y-6">
-        <Section title="Header Information">
-          <LoadState status={metaStatus === 'error' ? 'error' : 'ready'} error="Couldn't load group information.">
-            <div className="space-y-4">
-              <FieldRow cols={2}>
-                <Field label="Group" value={record.group_name ?? ''} onChange={(e) => setField('group_name', e.target.value)} />
-                <Field label="Rotation Block" value={record.rotation_block ?? ''} onChange={(e) => setField('rotation_block', e.target.value)} />
-              </FieldRow>
-              <div>
-                <FieldRow cols={2}>
-                  <Field
-                    type="date"
-                    label="Inclusive Dates — From"
-                    value={record.inclusive_date_start ?? ''}
-                    onChange={(e) => setField('inclusive_date_start', e.target.value || null)}
-                  />
-                  <Field
-                    type="date"
-                    label="Inclusive Dates — To"
-                    value={record.inclusive_date_end ?? ''}
-                    onChange={(e) => setField('inclusive_date_end', e.target.value || null)}
-                  />
-                </FieldRow>
-                {(record.inclusive_date_start || record.inclusive_date_end) && (
-                  <p className="text-sm text-ink-500 mt-2">
-                    {formatDateRange(record.inclusive_date_start, record.inclusive_date_end)}
-                  </p>
-                )}
-              </div>
-              <p className="text-xs text-ink-400">
-                Faculty/Preceptor Signature and Date are signed by hand on the exported PDF, not entered here.
-              </p>
-              <div className="h-4"><SaveStatus state={saveState} /></div>
-            </div>
-          </LoadState>
-        </Section>
-
         <Notice tone="amber" title="Confidentiality reminder">
           Use patient codes only. Do not include patient names, hospital numbers, addresses,
           contact numbers, photos, or any identifying information.
         </Notice>
 
-        <Section title="Add Case Entry">
-          <CaseLogFields values={newEntry} onChange={setNewEntry} />
-          {addError && <p className="text-sm text-red-600 mt-3">Failed to save: {addError}</p>}
-          <Button className="mt-4" onClick={handleAdd} disabled={adding}>
-            <IconPlus /> {adding ? 'Adding…' : 'Add Entry'}
-          </Button>
-        </Section>
+        {stats.departmentBreakdown.length > 0 && (
+          <Section title="Case Mix at a Glance">
+            <BarBreakdown items={stats.departmentBreakdown} />
+          </Section>
+        )}
 
-        <Section title={`Case Log (${rows.length} ${rows.length === 1 ? 'entry' : 'entries'})`}>
-          <div className="flex justify-end mb-3">
+        <Section
+          title={`Case Log (${rows.length} ${rows.length === 1 ? 'entry' : 'entries'})`}
+          actions={
             <Button variant="outline" onClick={handleExportPdf} disabled={rows.length === 0 || exporting}>
               {exporting ? 'Preparing PDF…' : 'Export to PDF'}
             </Button>
-          </div>
+          }
+        >
           <LoadState status={status} error={error}>
             {rows.length === 0 ? (
-              <p className="text-sm text-ink-400 italic py-4">No entries yet — add the group's first case above.</p>
+              <p className="text-sm text-ink-400 italic py-4">No entries yet — add a case below.</p>
             ) : (
-              <div className="overflow-x-auto -mx-5 sm:-mx-7 px-5 sm:px-7">
-                <table className="w-full border-collapse min-w-[880px]">
-                  <thead>
-                    <tr>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">No.</th>
-                      {sortHeader('Date Seen', 'date_seen')}
-                      {sortHeader('Department', 'department')}
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Role</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
-                      <th className="border-b border-ink-200 pb-2" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedRows.map((row, i) => (
-                      <CaseLogRow key={row.id} row={row} index={i} onUpdate={update} onDelete={remove} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table minWidth="880px">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <Th sortKey="date_seen" sortState={sortState} onSort={toggleSort}>Date Seen</Th>
+                    <Th sortKey="department" sortState={sortState} onSort={toggleSort}>Department</Th>
+                    <th>Clinical Area</th>
+                    <th>Patient Code</th>
+                    <th>Age/Sex</th>
+                    <th>Chief Complaint</th>
+                    <th>Working Diagnosis</th>
+                    <th>Student Role</th>
+                    <th>Student Assigned</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRows.map((row, i) => (
+                    <CaseLogRow key={row.id} row={row} index={i} onSelect={(r) => setSelectedRowId(r.id)} />
+                  ))}
+                </tbody>
+              </Table>
             )}
           </LoadState>
         </Section>
+
+        {addOpen ? (
+          <Section
+            title="Add Case Entry"
+            actions={<Button variant="outline" onClick={() => setAddOpen(false)}>-</Button>}
+          >
+            <LoadState status={metaStatus === 'error' ? 'error' : 'ready'} error="Couldn't load group information.">
+              <div className="space-y-6">
+                <div>
+                  <p className="text-sm font-semibold text-ink-900 mb-3">Header Information</p>
+                  <div className="space-y-4">
+                    <FieldRow cols={2}>
+                      <Field label="Group" value={record.group_name ?? ''} onChange={(e) => setField('group_name', e.target.value)} />
+                      <Field label="Rotation Block" value={record.rotation_block ?? ''} onChange={(e) => setField('rotation_block', e.target.value)} />
+                    </FieldRow>
+                    <div>
+                      <FieldRow cols={2}>
+                        <Field
+                          type="date"
+                          label="Inclusive Dates — From"
+                          value={record.inclusive_date_start ?? ''}
+                          onChange={(e) => setField('inclusive_date_start', e.target.value || null)}
+                        />
+                        <Field
+                          type="date"
+                          label="Inclusive Dates — To"
+                          value={record.inclusive_date_end ?? ''}
+                          onChange={(e) => setField('inclusive_date_end', e.target.value || null)}
+                        />
+                      </FieldRow>
+                      {(record.inclusive_date_start || record.inclusive_date_end) && (
+                        <p className="text-sm text-ink-500 mt-2">
+                          {formatDateRange(record.inclusive_date_start, record.inclusive_date_end)}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-xs text-ink-400">
+                      Faculty/Preceptor Signature and Date are signed by hand on the exported PDF, not entered here.
+                    </p>
+                    <div className="h-4"><SaveStatus state={saveState} /></div>
+                  </div>
+                </div>
+
+                <div className="border-t border-ink-100 pt-6">
+                  <p className="text-sm font-semibold text-ink-900 mb-3">Case Entry</p>
+                  <CaseLogFields values={newEntry} onChange={setNewEntry} />
+                  {addError && <p className="text-sm text-red-600 mt-3">Failed to save: {addError}</p>}
+                  <Button className="mt-4" onClick={handleAdd} disabled={adding}>
+                    <IconPlus /> {adding ? 'Adding…' : 'Add Entry'}
+                  </Button>
+                </div>
+              </div>
+            </LoadState>
+          </Section>
+        ) : (
+          <Button onClick={() => setAddOpen(true)}>
+            <IconPlus /> Add Case Entry
+          </Button>
+        )}
       </div>
+
+      <CaseLogDetailModal
+        entry={selectedRow}
+        onSave={handleUpdateSelected}
+        onDelete={handleDeleteSelected}
+        onClose={() => setSelectedRowId(null)}
+        onExport={handleExportPdf}
+        exporting={exporting}
+      />
     </div>
   )
 }

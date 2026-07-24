@@ -1,5 +1,11 @@
-import { Area, LoadState, PageHeader, SaveStatus, Section } from '../components/ui'
+import { useState } from 'react'
+import { EditBar, LoadState, PageActions, Section } from '../components/ui'
+import PageHero from '../components/PageHero'
+import PromptGroup from '../components/PromptGroup'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
+import { useEditableFields } from '../lib/useEditableFields'
+import { exportPromptsPdf } from '../lib/pdf'
+import { GROUP_NAME } from '../data/group'
 
 const prompts = [
   { key: 'qna_questions', label: 'What questions were raised during the Q&A?' },
@@ -10,29 +16,38 @@ const prompts = [
 ]
 
 export default function CasePresentation() {
-  const { record, status, saveState, setField } = useSupabaseRecord('case_presentation', 1)
+  const { record, status, saveState, setField, flush } = useSupabaseRecord('case_presentation', 1)
+  const { editing, draft, start, cancel, set, save, saving } = useEditableFields(record, setField, flush)
+  const [exporting, setExporting] = useState(false)
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportPromptsPdf({
+        title: `${GROUP_NAME} Case Presentation`,
+        prompts: prompts.map((p) => ({ label: p.label, value: record[p.key] })),
+        filename: 'group_case_presentation.pdf',
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div>
-      <PageHeader
+      <PageHero
+        compact
         eyebrow="Case Presentation"
         title="Case Presentation"
         description="Post-presentation reflection on the group's formal case presentation."
+        actions={<PageActions editing={editing} onEdit={start} onExport={handleExport} exporting={exporting} />}
       />
 
-      <Section>
-        <LoadState status={status === 'error' ? 'error' : 'ready'} error="Couldn't load this page's data.">
-          <div className="space-y-6">
-            {prompts.map((p) => (
-              <Area
-                key={p.key}
-                label={p.label}
-                value={record[p.key] ?? ''}
-                onChange={(e) => setField(p.key, e.target.value)}
-                minRows={3}
-              />
-            ))}
-            <div className="h-4"><SaveStatus state={saveState} /></div>
+      <Section variant="showcase">
+        <LoadState status={status} error="Couldn't load this page's data.">
+          <div className="space-y-8">
+            <PromptGroup prompts={prompts} values={editing ? draft : record} editing={editing} onChange={set} />
+            <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
           </div>
         </LoadState>
       </Section>

@@ -28,11 +28,6 @@ Every read/error state renders through `<LoadState>` (loading / error /
 content) so a dropped connection or an RLS misconfiguration shows a message
 instead of silently blank pages.
 
-**Rotation Overview is the one exception** — it's static reference content
-(objectives, schedule, assigned topics — set by the program, not typed live
-by students). No database involved; edit `src/data/rotationOverview.js`
-directly.
-
 ## Database schema
 
 All tables, RLS policies, and the realtime publication are defined in

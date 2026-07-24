@@ -1,15 +1,17 @@
 import { Navigate, useParams } from 'react-router-dom'
-import { Area, LoadState, PageHeader, SaveStatus, Section } from '../components/ui'
+import { Area, EditBar, LoadState, PageActions, Section } from '../components/ui'
+import PageHero from '../components/PageHero'
 import { departmentBySlug } from '../data/departments'
 import { useDepartmentNotes } from '../lib/useDepartmentNotes'
+import { useEditableFields } from '../lib/useEditableFields'
 
 const fields = [
-  { key: 'objectives', title: 'Department-Specific Objectives' },
-  { key: 'cases', title: 'Cases Seen or Discussed' },
-  { key: 'conditions', title: 'Common Conditions Encountered' },
-  { key: 'skills', title: 'Skills Observed or Practiced' },
-  { key: 'learning_points', title: 'Key Learning Points' },
-  { key: 'reflection', title: 'Department-Specific Reflection' },
+  { key: 'objectives', title: 'Department-Specific Objectives', minRows: 4 },
+  { key: 'cases', title: 'Cases Seen or Discussed', minRows: 3 },
+  { key: 'conditions', title: 'Common Conditions Encountered', minRows: 3 },
+  { key: 'skills', title: 'Skills Observed or Practiced', minRows: 3 },
+  { key: 'learning_points', title: 'Key Learning Points', minRows: 3 },
+  { key: 'reflection', title: 'Department-Specific Reflection', minRows: 4 },
 ]
 const sectionKeys = fields.map((f) => f.key)
 
@@ -23,24 +25,38 @@ export default function DepartmentPage() {
 }
 
 function DepartmentPageContent({ slug, dept }) {
-  const { values, status, saveState, setSection } = useDepartmentNotes(slug, sectionKeys)
+  const { values, status, saveState, setSection, flush } = useDepartmentNotes(slug, sectionKeys)
+  const { editing, draft, start, cancel, set, save, saving } = useEditableFields(values, setSection, flush)
+  const shown = editing ? draft : values
 
   return (
     <div>
-      <PageHeader eyebrow="Department" title={dept.name} description={dept.blurb} />
+      <PageHero
+        eyebrow="Department"
+        title={dept.name}
+        description={dept.blurb}
+        image={dept.image}
+        actions={<PageActions editing={editing} onEdit={start} />}
+      />
 
       <LoadState status={status} error="Couldn't load this department's notes.">
         <div className="space-y-6">
           {fields.map((f) => (
-            <Section key={f.key} title={f.title}>
-              <Area
-                value={values[f.key] ?? ''}
-                onChange={(e) => setSection(f.key, e.target.value)}
-                minRows={f.key === 'objectives' || f.key === 'reflection' ? 4 : 3}
-              />
+            <Section key={f.key} variant="showcase" title={f.title}>
+              {editing ? (
+                <Area
+                  value={draft[f.key] ?? ''}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  minRows={f.minRows}
+                />
+              ) : shown[f.key] ? (
+                <p className="text-[15px] leading-relaxed text-ink-700 whitespace-pre-line">{shown[f.key]}</p>
+              ) : (
+                <p className="text-sm text-ink-300 italic">Not filled in yet.</p>
+              )}
             </Section>
           ))}
-          <div className="h-4"><SaveStatus state={saveState} /></div>
+          <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
         </div>
       </LoadState>
     </div>

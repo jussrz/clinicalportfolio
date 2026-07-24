@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Button, LoadState, Notice, PageHeader } from '../components/ui'
+import { Button, LoadState, Notice, Section, Table } from '../components/ui'
+import PageHero from '../components/PageHero'
 import CaseReflectionCard from '../components/CaseReflectionCard'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { roleLabel } from '../lib/caseLog'
@@ -17,18 +18,18 @@ function SelectCaseRow({ entry, index, onSelect }) {
   }
 
   return (
-    <tr className="border-b border-ink-100 last:border-0 align-top">
-      <td className="py-2 pr-2 text-xs text-ink-500">{index + 1}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700 whitespace-nowrap">{entry.date_seen || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.department || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.clinical_area || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.patient_code || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.age_sex || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.chief_complaint || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.working_diagnosis || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{roleLabel(entry) || '—'}</td>
-      <td className="py-2 pr-2 text-xs text-ink-700">{entry.student_assigned || '—'}</td>
-      <td className="py-2 pr-1">
+    <tr>
+      <td className="text-ink-400">{index + 1}</td>
+      <td className="whitespace-nowrap">{entry.date_seen || '—'}</td>
+      <td>{entry.department || '—'}</td>
+      <td>{entry.clinical_area || '—'}</td>
+      <td>{entry.patient_code || '—'}</td>
+      <td>{entry.age_sex || '—'}</td>
+      <td>{entry.chief_complaint || '—'}</td>
+      <td>{entry.working_diagnosis || '—'}</td>
+      <td>{roleLabel(entry) || '—'}</td>
+      <td>{entry.student_assigned || '—'}</td>
+      <td>
         <Button variant="outline" onClick={handleSelect} disabled={saving}>
           {saving ? 'Selecting…' : 'Select'}
         </Button>
@@ -64,7 +65,8 @@ export default function CaseReflections() {
 
   return (
     <div>
-      <PageHeader
+      <PageHero
+        compact
         eyebrow="Selected Case Reflections"
         title="Selected Case Reflections"
         description="Pick cases from the group's Case Log Census for deeper group discussion. Case details auto-fill from the log and stay locked — only the reflection content is editable."
@@ -76,11 +78,10 @@ export default function CaseReflections() {
           terms only, never patient names or other identifying information.
         </Notice>
 
-        <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7">
-          <h2 className="text-base font-semibold text-ink-900 mb-1">Select a Case from the Log</h2>
-          <p className="text-sm text-ink-500 mb-4">
-            Suggested minimum: at least 1 reflection per major department, or 3–5 per rotation cycle.
-          </p>
+        <Section
+          title="Select a Case from the Log"
+          subtitle="Suggested minimum: at least 1 reflection per major department, or 3–5 per rotation cycle."
+        >
           <LoadState status={caseLogStatus} error={caseLogError}>
             {selectableEntries.length === 0 ? (
               <p className="text-sm text-ink-400 italic py-2">
@@ -89,33 +90,31 @@ export default function CaseReflections() {
                   : 'Every logged case already has a reflection.'}
               </p>
             ) : (
-              <div className="overflow-x-auto -mx-5 sm:-mx-7 px-5 sm:px-7">
-                <table className="w-full border-collapse min-w-[960px]">
-                  <thead>
-                    <tr>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">No.</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Date Seen</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Department</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Clinical Area</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Patient Code</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Age/Sex</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Chief Complaint</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Working Diagnosis</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Role</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Student Assigned</th>
-                      <th className="text-left text-xs font-bold uppercase tracking-wide text-ink-700 border-b border-ink-200 pb-2 pr-2">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectableEntries.map((entry, i) => (
-                      <SelectCaseRow key={entry.id} entry={entry} index={i} onSelect={handleSelect} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table minWidth="960px">
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>Date Seen</th>
+                    <th>Department</th>
+                    <th>Clinical Area</th>
+                    <th>Patient Code</th>
+                    <th>Age/Sex</th>
+                    <th>Chief Complaint</th>
+                    <th>Working Diagnosis</th>
+                    <th>Student Role</th>
+                    <th>Student Assigned</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectableEntries.map((entry, i) => (
+                    <SelectCaseRow key={entry.id} entry={entry} index={i} onSelect={handleSelect} />
+                  ))}
+                </tbody>
+              </Table>
             )}
           </LoadState>
-        </div>
+        </Section>
 
         <LoadState status={status} error={error}>
           <div className="space-y-6">

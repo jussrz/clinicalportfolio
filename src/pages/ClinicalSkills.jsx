@@ -1,39 +1,51 @@
-import { Area, LoadState, PageHeader, SaveStatus, Section } from '../components/ui'
+import { useState } from 'react'
+import { EditBar, LoadState, PageActions, Section } from '../components/ui'
+import PageHero from '../components/PageHero'
+import PromptGroup from '../components/PromptGroup'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
+import { useEditableFields } from '../lib/useEditableFields'
+import { exportPromptsPdf } from '../lib/pdf'
+import { GROUP_NAME } from '../data/group'
+
+const prompts = [
+  { key: 'confident_skills', label: 'Skills our group is becoming confident in' },
+  { key: 'skills_to_practice', label: 'Skills our group needs to practice more before clerkship' },
+  { key: 'improvement_plan', label: 'Plan to improve these skills' },
+]
 
 export default function ClinicalSkills() {
-  const { record, status, saveState, setField } = useSupabaseRecord('clinical_skills', 1)
+  const { record, status, saveState, setField, flush } = useSupabaseRecord('clinical_skills', 1)
+  const { editing, draft, start, cancel, set, save, saving } = useEditableFields(record, setField, flush)
+  const [exporting, setExporting] = useState(false)
+
+  async function handleExport() {
+    setExporting(true)
+    try {
+      await exportPromptsPdf({
+        title: `${GROUP_NAME} Clinical Skills & Clerkship Readiness`,
+        prompts: prompts.map((p) => ({ label: p.label, value: record[p.key] })),
+        filename: 'group_clinical_skills.pdf',
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div>
-      <PageHeader
+      <PageHero
+        compact
         eyebrow="Clinical Skills and Clerkship Readiness"
         title="Clinical Skills & Clerkship Readiness"
         description="Group synthesis of exposure to core clinical skills across the rotation."
+        actions={<PageActions editing={editing} onEdit={start} onExport={handleExport} exporting={exporting} />}
       />
 
-      <Section>
-        <LoadState status={status === 'error' ? 'error' : 'ready'} error="Couldn't load this page's data.">
-          <div className="space-y-6">
-            <Area
-              label="Skills our group is becoming confident in"
-              value={record.confident_skills ?? ''}
-              onChange={(e) => setField('confident_skills', e.target.value)}
-              minRows={3}
-            />
-            <Area
-              label="Skills our group needs to practice more before clerkship"
-              value={record.skills_to_practice ?? ''}
-              onChange={(e) => setField('skills_to_practice', e.target.value)}
-              minRows={3}
-            />
-            <Area
-              label="Plan to improve these skills"
-              value={record.improvement_plan ?? ''}
-              onChange={(e) => setField('improvement_plan', e.target.value)}
-              minRows={3}
-            />
-            <div className="h-4"><SaveStatus state={saveState} /></div>
+      <Section variant="showcase">
+        <LoadState status={status} error="Couldn't load this page's data.">
+          <div className="space-y-8">
+            <PromptGroup prompts={prompts} values={editing ? draft : record} editing={editing} onChange={set} />
+            <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
           </div>
         </LoadState>
       </Section>
