@@ -91,7 +91,7 @@ export default function IndividualContribution() {
   return (
     <div>
       <PageHero
-        compact
+        size="compact"
         eyebrow="Individual Contribution"
         title="Individual Contribution"
         description="Although the portfolio is submitted as a group, each student's contributions are documented here."

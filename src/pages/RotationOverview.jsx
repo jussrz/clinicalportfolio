@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Area, EditBar, LoadState, PageActions, Section } from '../components/ui'
 import PageHero from '../components/PageHero'
+import Reveal from '../components/Reveal'
+import Pullquote from '../components/Pullquote'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useEditableFields } from '../lib/useEditableFields'
 import { exportPromptsPdf } from '../lib/pdf'
@@ -42,7 +44,7 @@ export default function RotationOverview() {
   return (
     <div>
       <PageHero
-        compact
+        size="compact"
         eyebrow="Rotation Overview"
         title="Rotation Overview"
         description="Context for the group portfolio — objectives, schedule, and assigned topics as set by the clinical rotation program."
@@ -51,55 +53,65 @@ export default function RotationOverview() {
 
       <LoadState status={status} error="Couldn't load this page's data.">
         <div className="space-y-6">
-          <Section variant="showcase" title="General Objectives of the Clinical Rotation">
-            {editing ? (
-              <Area value={draft.general_objectives ?? ''} onChange={(e) => set('general_objectives', e.target.value)} minRows={4} />
-            ) : (
-              <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.general_objectives}</p>
-            )}
-          </Section>
+          <Reveal>
+            <Section variant="showcase" title="General Objectives of the Clinical Rotation">
+              {editing ? (
+                <Area value={draft.general_objectives ?? ''} onChange={(e) => set('general_objectives', e.target.value)} minRows={4} />
+              ) : (
+                <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.general_objectives}</p>
+              )}
+            </Section>
+          </Reveal>
 
-          <Section variant="showcase" title="Rotation-Specific Objectives per Department">
-            <div className="space-y-5">
-              {departments.map((d) => {
-                const key = deptColumn(d.slug)
-                return (
-                  <div key={d.slug}>
-                    <p className="text-sm font-semibold text-ink-800 mb-1.5">{d.name}</p>
-                    {editing ? (
-                      <Area value={draft[key] ?? ''} onChange={(e) => set(key, e.target.value)} minRows={3} />
-                    ) : (
-                      <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown[key]}</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </Section>
+          <Reveal>
+            <Section variant="showcase" title="Rotation-Specific Objectives per Department">
+              <div className="space-y-5">
+                {departments.map((d) => {
+                  const key = deptColumn(d.slug)
+                  return (
+                    <div key={d.slug}>
+                      <p className="text-sm font-semibold text-ink-800 mb-1.5">{d.name}</p>
+                      {editing ? (
+                        <Area value={draft[key] ?? ''} onChange={(e) => set(key, e.target.value)} minRows={3} />
+                      ) : (
+                        <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown[key]}</p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </Section>
+          </Reveal>
 
-          <Section variant="showcase" title="Clinical Rotation Schedule / Timeline">
-            {editing ? (
-              <Area value={draft.schedule ?? ''} onChange={(e) => set('schedule', e.target.value)} minRows={4} />
-            ) : (
-              <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.schedule}</p>
-            )}
-          </Section>
+          <Reveal>
+            <Section variant="showcase" title="Clinical Rotation Schedule / Timeline">
+              {editing ? (
+                <Area value={draft.schedule ?? ''} onChange={(e) => set('schedule', e.target.value)} minRows={4} />
+              ) : (
+                <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.schedule}</p>
+              )}
+            </Section>
+          </Reveal>
 
-          <Section variant="showcase" title="Assigned Case Topics per Rotation Cycle">
-            {editing ? (
-              <Area value={draft.case_topics ?? ''} onChange={(e) => set('case_topics', e.target.value)} minRows={3} />
-            ) : (
-              <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.case_topics}</p>
-            )}
-          </Section>
+          <Reveal>
+            <Section variant="showcase" title="Assigned Case Topics per Rotation Cycle">
+              {editing ? (
+                <Area value={draft.case_topics ?? ''} onChange={(e) => set('case_topics', e.target.value)} minRows={3} />
+              ) : (
+                <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.case_topics}</p>
+              )}
+            </Section>
+          </Reveal>
 
-          <Section variant="showcase" title="Group Learning Goals">
-            {editing ? (
-              <Area value={draft.learning_goals ?? ''} onChange={(e) => set('learning_goals', e.target.value)} minRows={3} />
-            ) : (
-              <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.learning_goals}</p>
-            )}
-          </Section>
+          <Reveal>
+            <Section variant="showcase" title="Group Learning Goals">
+              {editing ? (
+                <Area value={draft.learning_goals ?? ''} onChange={(e) => set('learning_goals', e.target.value)} minRows={3} />
+              ) : (
+                <Pullquote>{shown.learning_goals}</Pullquote>
+              )}
+            </Section>
+          </Reveal>
 
           <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
         </div>

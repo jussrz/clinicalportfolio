@@ -48,9 +48,7 @@ export function Section({ title, subtitle, actions, children, className = '', va
           : 'border-ink-200/70 card-shadow p-5 sm:p-7'
       } ${className}`}
     >
-      {showcase && (
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-400 via-brand-600 to-brand-400" />
-      )}
+      {showcase && <span className="accent-bar-top" />}
       {title && (
         <div className="mb-5 pb-4 border-b border-ink-100 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">

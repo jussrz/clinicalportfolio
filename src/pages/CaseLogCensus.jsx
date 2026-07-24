@@ -297,7 +297,7 @@ export default function CaseLogCensus() {
   return (
     <div>
       <PageHero
-        compact
+        size="compact"
         eyebrow="Group Case Log Census"
         title="Clinical Rotation Case Log Census"
         description="USM College of Medicine · Clinical Rotation – SY 2026–2027"

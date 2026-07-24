@@ -1,6 +1,7 @@
 import { Navigate, useParams } from 'react-router-dom'
 import { Area, EditBar, LoadState, PageActions, Section } from '../components/ui'
 import PageHero from '../components/PageHero'
+import Reveal from '../components/Reveal'
 import { departmentBySlug } from '../data/departments'
 import { useDepartmentNotes } from '../lib/useDepartmentNotes'
 import { useEditableFields } from '../lib/useEditableFields'
@@ -41,20 +42,22 @@ function DepartmentPageContent({ slug, dept }) {
 
       <LoadState status={status} error="Couldn't load this department's notes.">
         <div className="space-y-6">
-          {fields.map((f) => (
-            <Section key={f.key} variant="showcase" title={f.title}>
-              {editing ? (
-                <Area
-                  value={draft[f.key] ?? ''}
-                  onChange={(e) => set(f.key, e.target.value)}
-                  minRows={f.minRows}
-                />
-              ) : shown[f.key] ? (
-                <p className="text-[15px] leading-relaxed text-ink-700 whitespace-pre-line">{shown[f.key]}</p>
-              ) : (
-                <p className="text-sm text-ink-300 italic">Not filled in yet.</p>
-              )}
-            </Section>
+          {fields.map((f, i) => (
+            <Reveal key={f.key} delay={i * 40}>
+              <Section variant="showcase" title={f.title}>
+                {editing ? (
+                  <Area
+                    value={draft[f.key] ?? ''}
+                    onChange={(e) => set(f.key, e.target.value)}
+                    minRows={f.minRows}
+                  />
+                ) : shown[f.key] ? (
+                  <p className="text-[15px] leading-relaxed text-ink-700 whitespace-pre-line">{shown[f.key]}</p>
+                ) : (
+                  <p className="text-sm text-ink-300 italic">Not filled in yet.</p>
+                )}
+              </Section>
+            </Reveal>
           ))}
           <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
         </div>

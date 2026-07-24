@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EditBar, LoadState, PageActions, Section } from '../components/ui'
 import PageHero from '../components/PageHero'
+import Reveal from '../components/Reveal'
 import PromptGroup from '../components/PromptGroup'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useEditableFields } from '../lib/useEditableFields'
@@ -8,7 +9,7 @@ import { exportPromptsPdf } from '../lib/pdf'
 import { GROUP_NAME } from '../data/group'
 
 const prompts = [
-  { key: 'meaningful_experience', label: 'What was our most meaningful clinical learning experience?' },
+  { key: 'meaningful_experience', label: 'What was our most meaningful clinical learning experience?', feature: true },
   { key: 'patients_caregivers', label: 'What did we learn about working with patients and caregivers?' },
   { key: 'healthcare_team', label: 'What did we learn about working with the healthcare team?' },
   { key: 'workflows', label: 'What did we learn about hospital or community health workflows?' },
@@ -40,21 +41,23 @@ export default function GroupReflections() {
   return (
     <div>
       <PageHero
-        compact
+        size="compact"
         eyebrow="Group Reflections"
         title="Group Reflections"
         description="Structured reflections across the rotation, answered by the group as a whole."
         actions={<PageActions editing={editing} onEdit={start} onExport={handleExport} exporting={exporting} />}
       />
 
-      <Section variant="showcase">
-        <LoadState status={status} error="Couldn't load this page's data.">
-          <div className="space-y-8">
-            <PromptGroup prompts={numberedPrompts} values={editing ? draft : record} editing={editing} onChange={set} />
-            <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
-          </div>
-        </LoadState>
-      </Section>
+      <Reveal>
+        <Section variant="showcase">
+          <LoadState status={status} error="Couldn't load this page's data.">
+            <div className="space-y-8">
+              <PromptGroup prompts={numberedPrompts} values={editing ? draft : record} editing={editing} onChange={set} />
+              <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
+            </div>
+          </LoadState>
+        </Section>
+      </Reveal>
     </div>
   )
 }

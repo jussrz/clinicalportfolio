@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Area, Button, IconTrash, ListField } from './ui'
 import Pullquote from './Pullquote'
+import SectionLabel from './SectionLabel'
 import { underlinedField } from '../lib/pdf'
 import { roleLabel } from '../lib/caseLog'
 
@@ -210,18 +211,6 @@ function LockedStrip({ caseEntry }) {
   )
 }
 
-/** Small-caps eyebrow + accent rule marking a subsection within the read-only
- * reflection readout — mirrors PageHeader's eyebrow so a reflection reads
- * with the same visual grammar as the rest of the app's headline treatment. */
-function SectionLabel({ children }) {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="w-5 h-[3px] rounded-full bg-brand-500" />
-      <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">{children}</p>
-    </div>
-  )
-}
-
 export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDelete, defaultOpen = false, defaultEditing = false }) {
   const [open, setOpen] = useState(defaultOpen || defaultEditing)
   const [editing, setEditing] = useState(defaultEditing)
@@ -277,7 +266,7 @@ export default function CaseReflectionCard({ reflection, caseEntry, onSave, onDe
 
   return (
     <div className="relative bg-white border border-ink-200/60 rounded-2xl card-shadow-lg overflow-hidden">
-      <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-400 via-brand-600 to-brand-400" />
+      <span className="accent-bar-top" />
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

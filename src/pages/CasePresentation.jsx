@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { EditBar, LoadState, PageActions, Section } from '../components/ui'
 import PageHero from '../components/PageHero'
+import Reveal from '../components/Reveal'
 import PromptGroup from '../components/PromptGroup'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useEditableFields } from '../lib/useEditableFields'
@@ -12,7 +13,7 @@ const prompts = [
   { key: 'strong_parts', label: 'Which parts of our presentation were strong?' },
   { key: 'needs_improvement', label: 'Which parts needed improvement?' },
   { key: 'corrections_learned', label: 'What corrections or additional learning points did we gain after faculty feedback?' },
-  { key: 'next_improvements', label: 'How will we improve our next case presentation?' },
+  { key: 'next_improvements', label: 'How will we improve our next case presentation?', feature: true },
 ]
 
 export default function CasePresentation() {
@@ -36,21 +37,23 @@ export default function CasePresentation() {
   return (
     <div>
       <PageHero
-        compact
+        size="compact"
         eyebrow="Case Presentation"
         title="Case Presentation"
         description="Post-presentation reflection on the group's formal case presentation."
         actions={<PageActions editing={editing} onEdit={start} onExport={handleExport} exporting={exporting} />}
       />
 
-      <Section variant="showcase">
-        <LoadState status={status} error="Couldn't load this page's data.">
-          <div className="space-y-8">
-            <PromptGroup prompts={prompts} values={editing ? draft : record} editing={editing} onChange={set} />
-            <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
-          </div>
-        </LoadState>
-      </Section>
+      <Reveal>
+        <Section variant="showcase">
+          <LoadState status={status} error="Couldn't load this page's data.">
+            <div className="space-y-8">
+              <PromptGroup prompts={prompts} values={editing ? draft : record} editing={editing} onChange={set} />
+              <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
+            </div>
+          </LoadState>
+        </Section>
+      </Reveal>
     </div>
   )
 }

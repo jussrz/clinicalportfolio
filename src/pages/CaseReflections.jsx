@@ -66,7 +66,7 @@ export default function CaseReflections() {
   return (
     <div>
       <PageHero
-        compact
+        size="compact"
         eyebrow="Selected Case Reflections"
         title="Selected Case Reflections"
         description="Pick cases from the group's Case Log Census for deeper group discussion. Case details auto-fill from the log and stay locked — only the reflection content is editable."
