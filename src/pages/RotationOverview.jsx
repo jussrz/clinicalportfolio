@@ -1,13 +1,10 @@
-import { useState } from 'react'
 import { Area, EditBar, LoadState, PageActions, Section } from '../components/ui'
 import PageHero from '../components/PageHero'
 import Reveal from '../components/Reveal'
 import Pullquote from '../components/Pullquote'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useEditableFields } from '../lib/useEditableFields'
-import { exportPromptsPdf } from '../lib/pdf'
 import { departments } from '../data/departments'
-import { GROUP_NAME } from '../data/group'
 
 // Postgres column names can't contain hyphens, so department slugs map to
 // obj_<slug with underscores> columns on the rotation_overview row.
@@ -16,30 +13,7 @@ const deptColumn = (slug) => `obj_${slug.replace(/-/g, '_')}`
 export default function RotationOverview() {
   const { record, status, saveState, setField, flush } = useSupabaseRecord('rotation_overview', 1)
   const { editing, draft, start, cancel, set, save, saving } = useEditableFields(record, setField, flush)
-  const [exporting, setExporting] = useState(false)
   const shown = editing ? draft : record
-
-  async function handleExport() {
-    setExporting(true)
-    try {
-      await exportPromptsPdf({
-        title: `${GROUP_NAME} Rotation Overview`,
-        prompts: [
-          { label: 'General Objectives of the Clinical Rotation', value: record.general_objectives },
-          ...departments.map((d) => ({
-            label: `Rotation-Specific Objectives — ${d.name}`,
-            value: record[deptColumn(d.slug)],
-          })),
-          { label: 'Clinical Rotation Schedule / Timeline', value: record.schedule },
-          { label: 'Assigned Case Topics per Rotation Cycle', value: record.case_topics },
-          { label: 'Group Learning Goals', value: record.learning_goals },
-        ],
-        filename: 'rotation_overview.pdf',
-      })
-    } finally {
-      setExporting(false)
-    }
-  }
 
   return (
     <div>
@@ -48,7 +22,7 @@ export default function RotationOverview() {
         eyebrow="Rotation Overview"
         title="Rotation Overview"
         description="Context for the group portfolio — objectives, schedule, and assigned topics as set by the clinical rotation program."
-        actions={<PageActions editing={editing} onEdit={start} onExport={handleExport} exporting={exporting} />}
+        actions={<PageActions editing={editing} onEdit={start} />}
       />
 
       <LoadState status={status} error="Couldn't load this page's data.">

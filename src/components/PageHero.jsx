@@ -9,8 +9,9 @@ const SIZES = {
  * identity instead of a plain white page title. Pass `image` (department
  * pages, Home) for a photographic banner with a brand-tinted scrim for text
  * legibility; omit it for the plain gradient used on data/reflection pages.
- * `actions` render inside a light pill so PageActions' icon stays legible
- * against the dark background regardless of size. */
+ * `actions` render as their own separate elements (see PageActions), each
+ * carrying its own light background so they stay legible against the dark
+ * hero regardless of size. */
 export default function PageHero({ eyebrow, title, description, image, actions, children, size = 'default' }) {
   const { pad, title: titleSize, desc: descSize } = SIZES[size]
   const tall = size === 'xl'
@@ -52,9 +53,7 @@ export default function PageHero({ eyebrow, title, description, image, actions, 
           {description && <p className={`mt-2 leading-relaxed text-brand-100/90 ${descSize}`}>{description}</p>}
           {children}
         </div>
-        {actions && (
-          <div className="flex gap-2 shrink-0 bg-white/95 backdrop-blur rounded-xl p-1 shadow-sm">{actions}</div>
-        )}
+        {actions && <div className="flex gap-2 shrink-0">{actions}</div>}
       </div>
     </div>
   )

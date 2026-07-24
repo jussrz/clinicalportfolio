@@ -95,29 +95,14 @@ export default function IndividualContribution() {
         eyebrow="Individual Contribution"
         title="Individual Contribution"
         description="Although the portfolio is submitted as a group, each student's contributions are documented here."
+        actions={
+          <Button variant="outline" onClick={handleExport} disabled={rows.length === 0 || exporting}>
+            {exporting ? 'Preparing PDF…' : 'Export to PDF'}
+          </Button>
+        }
       />
 
       <div className="space-y-6">
-        <LoadState status={status} error={error}>
-          <div className="space-y-4">
-            {rows.map((row) => (
-              <ContributionRow key={row.id} row={row} onUpdate={update} onDelete={remove} />
-            ))}
-            {rows.length === 0 && !adding && (
-              <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
-                <p className="text-sm text-ink-500">No students added yet.</p>
-              </div>
-            )}
-            {rows.length > 0 && (
-              <div className="flex justify-end">
-                <Button variant="outline" onClick={handleExport} disabled={exporting}>
-                  {exporting ? 'Preparing PDF…' : 'Export to PDF'}
-                </Button>
-              </div>
-            )}
-          </div>
-        </LoadState>
-
         {adding ? (
           <Section title="Add Student">
             <div className="space-y-4">
@@ -134,6 +119,19 @@ export default function IndividualContribution() {
             <IconPlus /> Add Student
           </Button>
         )}
+
+        <LoadState status={status} error={error}>
+          <div className="space-y-4">
+            {rows.map((row) => (
+              <ContributionRow key={row.id} row={row} onUpdate={update} onDelete={remove} />
+            ))}
+            {rows.length === 0 && !adding && (
+              <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">
+                <p className="text-sm text-ink-500">No students added yet.</p>
+              </div>
+            )}
+          </div>
+        </LoadState>
       </div>
     </div>
   )

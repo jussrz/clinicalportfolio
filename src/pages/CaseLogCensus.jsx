@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Section, Notice, Field, FieldRow, SelectField, Button, IconPlus, LoadState, Modal, SaveStatus, Table, Th } from '../components/ui'
+import { Section, Notice, Field, FieldRow, SelectField, Button, IconClose, IconPlus, LoadState, Modal, SaveStatus, Table, Th } from '../components/ui'
 import PageHero from '../components/PageHero'
 import BarBreakdown from '../components/BarBreakdown'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
@@ -137,14 +137,14 @@ function CaseLogRow({ row, index, onSelect }) {
     <tr onClick={() => onSelect(row)} className="cursor-pointer">
       <td className="text-ink-400">{index + 1}</td>
       <td className="whitespace-nowrap">{row.date_seen || '—'}</td>
-      <td>{row.department || '—'}</td>
-      <td>{row.clinical_area || '—'}</td>
-      <td>{row.patient_code || '—'}</td>
-      <td>{row.age_sex || '—'}</td>
-      <td>{row.chief_complaint || '—'}</td>
-      <td>{row.working_diagnosis || '—'}</td>
-      <td className="whitespace-nowrap">{roleLabel(row) || '—'}</td>
-      <td>{row.student_assigned || '—'}</td>
+      <td className="truncate" title={row.department}>{row.department || '—'}</td>
+      <td className="truncate" title={row.clinical_area}>{row.clinical_area || '—'}</td>
+      <td className="truncate" title={row.patient_code}>{row.patient_code || '—'}</td>
+      <td className="truncate">{row.age_sex || '—'}</td>
+      <td className="truncate" title={row.chief_complaint}>{row.chief_complaint || '—'}</td>
+      <td className="truncate" title={row.working_diagnosis}>{row.working_diagnosis || '—'}</td>
+      <td className="truncate">{roleLabel(row) || '—'}</td>
+      <td className="truncate" title={row.student_assigned}>{row.student_assigned || '—'}</td>
     </tr>
   )
 }
@@ -327,19 +327,19 @@ export default function CaseLogCensus() {
             {rows.length === 0 ? (
               <p className="text-sm text-ink-400 italic py-4">No entries yet — add a case below.</p>
             ) : (
-              <Table minWidth="880px">
+              <Table minWidth="880px" className="table-fixed">
                 <thead>
                   <tr>
-                    <th>No.</th>
-                    <Th sortKey="date_seen" sortState={sortState} onSort={toggleSort}>Date Seen</Th>
-                    <Th sortKey="department" sortState={sortState} onSort={toggleSort}>Department</Th>
-                    <th>Clinical Area</th>
-                    <th>Patient Code</th>
-                    <th>Age/Sex</th>
-                    <th>Chief Complaint</th>
-                    <th>Working Diagnosis</th>
-                    <th>Student Role</th>
-                    <th>Student Assigned</th>
+                    <th className="w-14">No.</th>
+                    <Th sortKey="date_seen" sortState={sortState} onSort={toggleSort} className="w-28">Date Seen</Th>
+                    <Th sortKey="department" sortState={sortState} onSort={toggleSort} className="w-32">Department</Th>
+                    <th className="w-[150px]">Clinical Area</th>
+                    <th className="w-[140px]">Patient Code</th>
+                    <th className="w-24">Age/Sex</th>
+                    <th className="w-[150px]">Chief Complaint</th>
+                    <th className="w-[170px]">Working Diagnosis</th>
+                    <th className="w-[140px]">Student Role</th>
+                    <th className="w-[170px]">Student Assigned</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -355,7 +355,16 @@ export default function CaseLogCensus() {
         {addOpen ? (
           <Section
             title="Add Case Entry"
-            actions={<Button variant="outline" onClick={() => setAddOpen(false)}>-</Button>}
+            actions={
+              <button
+                type="button"
+                onClick={() => setAddOpen(false)}
+                aria-label="Close"
+                className="w-8 h-8 grid place-items-center rounded-lg text-ink-400 hover:text-ink-700 hover:bg-ink-100 transition-colors"
+              >
+                <IconClose />
+              </button>
+            }
           >
             <LoadState status={metaStatus === 'error' ? 'error' : 'ready'} error="Couldn't load group information.">
               <div className="space-y-6">

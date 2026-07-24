@@ -324,7 +324,7 @@ export function PageActions({ editing, onEdit, onExport, exporting }) {
         onClick={onEdit}
         aria-label="Edit this page"
         title="Edit this page"
-        className="w-9 h-9 grid place-items-center rounded-lg text-ink-300 hover:text-brand-700 hover:bg-brand-50 transition-colors"
+        className="w-9 h-9 grid place-items-center rounded-lg bg-white/95 backdrop-blur shadow-sm text-ink-400 hover:text-brand-700 hover:bg-white transition-colors"
       >
         <IconPencil />
       </button>
