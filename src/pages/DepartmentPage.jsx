@@ -19,7 +19,7 @@ const sectionKeys = fields.map((f) => f.key)
 export default function DepartmentPage() {
   const { slug } = useParams()
   const dept = departmentBySlug(slug)
-  if (!dept) return <Navigate to="/" replace />
+  if (!dept) return <Navigate to="/studio" replace />
   // Key forces a full remount on slug change so hook state never leaks
   // stale content from the previously-viewed department.
   return <DepartmentPageContent key={slug} slug={slug} dept={dept} />

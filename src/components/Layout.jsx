@@ -1,31 +1,8 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 import { departments } from '../data/departments'
 import { GROUP_NAME } from '../data/group'
-
-const icons = {
-  home: 'M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9',
-  compass: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm3.5-13.5-2 5-5 2 2-5 5-2Z',
-  table: 'M3 5h18M3 12h18M3 19h18M8 5v14M16 5v14',
-  layers: 'm12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 17l9 5 9-5',
-  bookmark: 'M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z',
-  presentation: 'M3 4h18M4 4v11a1 1 0 0 0 1 1h4l-2 4M20 4v11a1 1 0 0 0-1 1h-4l2 4M12 15v-4',
-  activity: 'M3 12h4l2 7 4-14 2 7h6',
-  message: 'M4 4h16v12H8l-4 4V4Z',
-  users: 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2.5 20a5.5 5.5 0 0 1 11 0M16.5 11a3 3 0 1 0 0-6M15 14.5a5.5 5.5 0 0 1 6.5 5.5',
-  refresh: 'M21 12a9 9 0 1 1-3-6.7M21 4v5h-5',
-  menu: 'M4 6h16M4 12h16M4 18h16',
-  close: 'M6 6l12 12M18 6 6 18',
-  chevron: 'm9 6 6 6-6 6',
-}
-
-function Icon({ name, className = 'w-[18px] h-[18px]' }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d={icons[name]} />
-    </svg>
-  )
-}
+import { Icon } from './Icon'
 
 const navLinkClass = (collapsed) => ({ isActive }) =>
   `flex items-center ${collapsed ? 'justify-center' : ''} gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -54,15 +31,15 @@ function SidebarNav({ collapsed, deptOpen, setDeptOpen, onExpand }) {
 
   return (
     <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll px-3 py-4 space-y-1">
-      <NavLink to="/" end className={cls} title={collapsed ? 'Home' : undefined}>
+      <NavLink to="/studio" end className={cls} title={collapsed ? 'Home' : undefined}>
         <Icon name="home" />
         {!collapsed && 'Home'}
       </NavLink>
-      <NavLink to="/rotation-overview" className={cls} title={collapsed ? 'Rotation Overview' : undefined}>
+      <NavLink to="/studio/rotation-overview" className={cls} title={collapsed ? 'Rotation Overview' : undefined}>
         <Icon name="compass" />
         {!collapsed && 'Rotation Overview'}
       </NavLink>
-      <NavLink to="/case-log-census" className={cls} title={collapsed ? 'Group Case Log Census' : undefined}>
+      <NavLink to="/studio/case-log-census" className={cls} title={collapsed ? 'Group Case Log Census' : undefined}>
         <Icon name="table" />
         {!collapsed && 'Group Case Log Census'}
       </NavLink>
@@ -81,7 +58,7 @@ function SidebarNav({ collapsed, deptOpen, setDeptOpen, onExpand }) {
         {!collapsed && deptOpen && (
           <div className="mt-1 ml-4 pl-4 border-l border-white/15 space-y-1">
             {departments.map((d) => (
-              <NavLink key={d.slug} to={`/departments/${d.slug}`} className={cls}>
+              <NavLink key={d.slug} to={`/studio/departments/${d.slug}`} className={cls}>
                 <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60 shrink-0" />
                 {d.name}
               </NavLink>
@@ -90,27 +67,27 @@ function SidebarNav({ collapsed, deptOpen, setDeptOpen, onExpand }) {
         )}
       </div>
 
-      <NavLink to="/case-reflections" className={cls} title={collapsed ? 'Selected Case Reflections' : undefined}>
+      <NavLink to="/studio/case-reflections" className={cls} title={collapsed ? 'Selected Case Reflections' : undefined}>
         <Icon name="bookmark" />
         {!collapsed && 'Selected Case Reflections'}
       </NavLink>
-      <NavLink to="/case-presentation" className={cls} title={collapsed ? 'Case Presentation' : undefined}>
+      <NavLink to="/studio/case-presentation" className={cls} title={collapsed ? 'Case Presentation' : undefined}>
         <Icon name="presentation" />
         {!collapsed && 'Case Presentation'}
       </NavLink>
-      <NavLink to="/clinical-skills" className={cls} title={collapsed ? 'Clinical Skills & Readiness' : undefined}>
+      <NavLink to="/studio/clinical-skills" className={cls} title={collapsed ? 'Clinical Skills & Readiness' : undefined}>
         <Icon name="activity" />
         {!collapsed && 'Clinical Skills & Readiness'}
       </NavLink>
-      <NavLink to="/feedback-action-plan" className={cls} title={collapsed ? 'Feedback & Action Plan' : undefined}>
+      <NavLink to="/studio/feedback-action-plan" className={cls} title={collapsed ? 'Feedback & Action Plan' : undefined}>
         <Icon name="message" />
         {!collapsed && 'Feedback & Action Plan'}
       </NavLink>
-      <NavLink to="/individual-contribution" className={cls} title={collapsed ? 'Individual Contribution' : undefined}>
+      <NavLink to="/studio/individual-contribution" className={cls} title={collapsed ? 'Individual Contribution' : undefined}>
         <Icon name="users" />
         {!collapsed && 'Individual Contribution'}
       </NavLink>
-      <NavLink to="/group-reflections" className={cls} title={collapsed ? 'Group Reflections' : undefined}>
+      <NavLink to="/studio/group-reflections" className={cls} title={collapsed ? 'Group Reflections' : undefined}>
         <Icon name="refresh" />
         {!collapsed && 'Group Reflections'}
       </NavLink>
@@ -237,10 +214,26 @@ function SidebarHeader({ collapsed, onToggle }) {
 }
 
 function SidebarFooter({ collapsed }) {
-  if (collapsed) return null
+  if (collapsed) {
+    return (
+      <div className="px-3 py-4 border-t border-white/10 flex justify-center">
+        <Link
+          to="/"
+          aria-label="View public portfolio"
+          title="View public portfolio"
+          className="p-1.5 rounded-lg text-brand-100/70 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          <Icon name="arrowRight" className="w-4 h-4" />
+        </Link>
+      </div>
+    )
+  }
   return (
-    <div className="px-4 py-4 border-t border-white/10 text-xs text-brand-200/60">
-      University of Southern Mindanao — College of Medicine
+    <div className="px-4 py-4 border-t border-white/10 text-xs text-brand-200/60 space-y-2">
+      <Link to="/" className="flex items-center gap-1.5 font-medium text-brand-100 hover:text-white transition-colors">
+        View Public Portfolio <Icon name="arrowRight" className="w-3.5 h-3.5" />
+      </Link>
+      <p>University of Southern Mindanao — College of Medicine</p>
     </div>
   )
 }
