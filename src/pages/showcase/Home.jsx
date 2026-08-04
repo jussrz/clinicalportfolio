@@ -43,7 +43,7 @@ export default function Home() {
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0e2a19]/90 via-[#0e2a19]/25 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/90 via-brand-950/25 to-transparent" />
                 <div className="relative h-full flex flex-col justify-end p-4">
                   <p className="font-display text-lg font-semibold text-white">{d.name}</p>
                   <p className="text-xs text-brand-100/85 mt-0.5">{d.blurb}</p>

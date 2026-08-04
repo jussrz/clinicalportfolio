@@ -118,7 +118,7 @@ export default function RotationOverview() {
                         loading="lazy"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0e2a19]/75 via-[#0e2a19]/10 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-brand-950/75 via-brand-950/10 to-transparent" />
                       <p className="absolute bottom-2 left-3 font-display text-sm font-semibold text-white">{d.name}</p>
                     </div>
                     <div className="p-4 flex-1">
@@ -134,7 +134,7 @@ export default function RotationOverview() {
 
       {record.learning_goals && (
         <Reveal>
-          <div className="relative overflow-hidden rounded-2xl px-6 py-10 sm:px-14 sm:py-16 text-center bg-gradient-to-br from-[#1f5b34] via-brand-800 to-[#0e2a19]">
+          <div className="relative overflow-hidden rounded-2xl px-6 py-10 sm:px-14 sm:py-16 text-center bg-gradient-to-br from-brand-800 via-brand-900 to-brand-950">
             <p className="text-xs font-semibold uppercase tracking-widest text-brand-200 mb-4">Group Learning Goals</p>
             <p className="max-w-2xl mx-auto font-display italic text-xl sm:text-2xl leading-relaxed text-white">
               “{record.learning_goals}”

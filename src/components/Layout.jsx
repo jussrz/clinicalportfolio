@@ -102,7 +102,7 @@ function SidebarNav({ collapsed, deptOpen, setDeptOpen, onExpand }) {
 function MemberGate({ onSubmit }) {
   const [value, setValue] = useState('')
   const [error, setError] = useState('')
-  const sidebarBg = 'bg-gradient-to-b from-[#1f5b34] via-brand-900 to-[#0e2a19]'
+  const sidebarBg = 'bg-gradient-to-b from-brand-800 via-brand-900 to-brand-950'
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -159,7 +159,7 @@ export default function Layout() {
     window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(collapsed))
   }, [collapsed])
 
-  const sidebarBg = 'bg-gradient-to-b from-[#1f5b34] via-brand-900 to-[#0e2a19]'
+  const sidebarBg = 'bg-gradient-to-b from-brand-800 via-brand-900 to-brand-950'
 
   if (!member) {
     return <MemberGate onSubmit={login} />

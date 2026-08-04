@@ -24,13 +24,13 @@ export default function PageHero({ eyebrow, title, description, image, actions, 
           {/* Scrim only behind the text column so the photo itself stays
               visible — a flat wash over the whole image (the old approach)
               reads as a solid color banner, not a photo. */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0e2a19]/85 via-[#0e2a19]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-950/85 via-brand-950/40 to-transparent" />
           {(actions || tall) && (
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0e2a19]/55 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-brand-950/55 via-transparent to-transparent" />
           )}
         </>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1f5b34] via-brand-800 to-[#0e2a19]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-800 via-brand-900 to-brand-950" />
       )}
       <div
         className="pointer-events-none absolute inset-0 opacity-40"

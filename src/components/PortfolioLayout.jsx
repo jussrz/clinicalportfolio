@@ -11,7 +11,7 @@ const navLinkClass = (collapsed) => ({ isActive }) =>
   }`
 
 const SIDEBAR_COLLAPSE_KEY = 'clinicalPortfolio.publicSidebarCollapsed'
-const SIDEBAR_BG = 'bg-gradient-to-b from-[#1f5b34] via-brand-900 to-[#0e2a19]'
+const SIDEBAR_BG = 'bg-gradient-to-b from-brand-800 via-brand-900 to-brand-950'
 
 /** Public-portfolio mirror of Studio's SidebarNav (src/components/Layout.jsx)
  * — same 9 sections, same order, same icons, so the two shells read as one
