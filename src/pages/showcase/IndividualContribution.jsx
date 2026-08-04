@@ -30,7 +30,7 @@ function MemberCard({ name, photoUrl, to }) {
 }
 
 export default function IndividualContribution() {
-  const { rows, status, error } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
+  const { rows, status, error } = useSupabaseTable('individual_contributions', { orderBy: 'student_name', ascending: true })
 
   return (
     <div>

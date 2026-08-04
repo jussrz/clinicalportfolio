@@ -28,6 +28,7 @@ export default function CasePresentation() {
         title: `${GROUP_NAME} Case Presentation`,
         prompts: prompts.map((p) => ({ label: p.label, value: record[p.key] })),
         filename: 'group_case_presentation.pdf',
+        plain: true,
       })
     } finally {
       setExporting(false)

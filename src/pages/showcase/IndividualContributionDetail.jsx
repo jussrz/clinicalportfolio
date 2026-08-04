@@ -1,10 +1,10 @@
 import { Link, useParams } from 'react-router-dom'
-import PageHero from '../../components/PageHero'
 import CaseLogTable from '../../components/CaseLogTable'
 import { Icon } from '../../components/Icon'
 import { LoadState, Notice } from '../../components/ui'
 import { useSupabaseTable } from '../../lib/useSupabaseTable'
 import { useIndividualCases } from '../../lib/useIndividualCases'
+import { initials } from '../../lib/avatar'
 import { studentFullName } from '../../data/group'
 
 const REFLECTION_PROMPTS = [
@@ -28,6 +28,36 @@ function BackLink() {
   )
 }
 
+/** Split-card profile hero: a photo pane on one side, name/badge on the
+ * other, on a plain white surface — reads as an editorial masthead rather
+ * than a cropped photo forced into a dark banner. Photo pane comes first in
+ * markup (left on desktop, on top when stacked on mobile). */
+function ProfileHero({ name, subtitle, photoUrl }) {
+  return (
+    <div className="relative rounded-2xl border border-ink-200/70 bg-white overflow-hidden mb-6 card-shadow">
+      <div className="grid sm:grid-cols-[1fr_1.15fr]">
+        <div className="relative min-h-[220px] sm:min-h-[260px]">
+          {photoUrl ? (
+            <img src={photoUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-brand-500 to-brand-700 text-white font-display text-4xl font-semibold">
+              {initials(name)}
+            </div>
+          )}
+        </div>
+        <div className="p-6 sm:p-9 flex flex-col justify-center">
+          <div className="inline-flex items-center gap-2 self-start rounded-full bg-brand-50 border border-brand-200 px-3 py-1 mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-600" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand-700">Individual Contribution</p>
+          </div>
+          <h1 className="font-display font-semibold text-ink-900 tracking-tight text-2xl sm:text-3xl">{name}</h1>
+          {subtitle && <p className="mt-3 text-[15px] text-ink-500">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function IndividualContributionDetail() {
   const { id } = useParams()
   const { rows, status, error } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
@@ -46,11 +76,10 @@ export default function IndividualContributionDetail() {
           </Notice>
         ) : (
           <>
-            <PageHero
-              eyebrow="Individual Contribution"
-              title={row.student_name ? studentFullName(row.student_name) : 'Unnamed student'}
-              description={row.year_level_section || undefined}
-              image={row.photo_url || undefined}
+            <ProfileHero
+              name={row.student_name ? studentFullName(row.student_name) : 'Unnamed student'}
+              subtitle={row.year_level_section}
+              photoUrl={row.photo_url}
             />
 
             <div className="space-y-6">

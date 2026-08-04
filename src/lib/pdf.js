@@ -43,7 +43,7 @@ function drawLetterhead(doc, pageWidth, title) {
  * single-record reflection page (Rotation Overview, Case Presentation,
  * Clinical Skills, Feedback & Action Plan, Group Reflections, Individual
  * Contribution). */
-export async function exportPromptsPdf({ title, prompts, filename }) {
+export async function exportPromptsPdf({ title, prompts, filename, plain = false }) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -86,7 +86,7 @@ export async function exportPromptsPdf({ title, prompts, filename }) {
     ensureRoom(labelLines.length)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10.5)
-    doc.setTextColor(...BRAND_TEXT)
+    doc.setTextColor(...(plain ? INK_BODY : BRAND_TEXT))
     doc.text(numLines, PAGE_MARGIN_X, y)
     doc.text(labelLines, PAGE_MARGIN_X + contentIndent, y)
     y += labelLines.length * 13.5 + 6
@@ -109,10 +109,12 @@ export async function exportPromptsPdf({ title, prompts, filename }) {
     }
   })
 
-  const pageCount = doc.internal.getNumberOfPages()
-  for (let p = 1; p <= pageCount; p++) {
-    doc.setPage(p)
-    drawFooter(p, pageCount)
+  if (!plain) {
+    const pageCount = doc.internal.getNumberOfPages()
+    for (let p = 1; p <= pageCount; p++) {
+      doc.setPage(p)
+      drawFooter(p, pageCount)
+    }
   }
 
   doc.save(filename)

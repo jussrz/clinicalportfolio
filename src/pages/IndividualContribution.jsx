@@ -296,7 +296,7 @@ function ContributionRow({ row, groupInfo, onUpdate, onDelete, canEdit }) {
 }
 
 export default function IndividualContribution() {
-  const { rows, status, error, update, remove } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
+  const { rows, status, error, update, remove } = useSupabaseTable('individual_contributions', { orderBy: 'student_name', ascending: true })
   const { record: groupInfo } = useSupabaseRecord('group_metadata', 1)
   const { member } = useCurrentMember()
   const [exporting, setExporting] = useState(false)
