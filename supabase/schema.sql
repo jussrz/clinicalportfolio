@@ -138,14 +138,46 @@ alter table case_reflections add column if not exists group_challenges text not 
 alter table case_reflections add column if not exists group_improvements text not null default '';
 
 -- ---------------------------------------------------------------------
--- individual_contributions
+-- individual_contributions — one row per roster student. The cases they
+-- contributed to aren't stored here — they're read live off case_log_entries
+-- via student_assigned (matched against this row's student_name), same
+-- single-source-of-truth pattern as case_reflections above. The
+-- year_level_section/common_cases/skills_observed/lesson_learned/
+-- area_to_improve columns back the "Add Reflection" Student Reflection form.
 -- ---------------------------------------------------------------------
 create table if not exists individual_contributions (
   id uuid primary key default gen_random_uuid(),
   student_name text,
-  contribution_summary text,
   created_at timestamptz not null default now()
 );
+
+alter table individual_contributions drop column if exists contribution_summary;
+alter table individual_contributions add column if not exists year_level_section text not null default '';
+alter table individual_contributions add column if not exists common_cases text not null default '';
+alter table individual_contributions add column if not exists skills_observed text not null default '';
+alter table individual_contributions add column if not exists lesson_learned text not null default '';
+alter table individual_contributions add column if not exists area_to_improve text not null default '';
+alter table individual_contributions add column if not exists photo_url text;
+
+-- ---------------------------------------------------------------------
+-- avatars storage bucket — public bucket for profile photos, referenced by
+-- individual_contributions.photo_url. Public read (the portfolio is a
+-- public showcase); anon can insert/update/delete objects in this bucket so
+-- a student can upload their own photo from the client, same soft
+-- identity-label trust model as every table's RLS above (not real auth).
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+drop policy if exists "avatars public read" on storage.objects;
+create policy "avatars public read" on storage.objects for select using (bucket_id = 'avatars');
+drop policy if exists "avatars anon insert" on storage.objects;
+create policy "avatars anon insert" on storage.objects for insert with check (bucket_id = 'avatars');
+drop policy if exists "avatars anon update" on storage.objects;
+create policy "avatars anon update" on storage.objects for update using (bucket_id = 'avatars') with check (bucket_id = 'avatars');
+drop policy if exists "avatars anon delete" on storage.objects;
+create policy "avatars anon delete" on storage.objects for delete using (bucket_id = 'avatars');
 
 -- ---------------------------------------------------------------------
 -- department_notes — keyed by department + section, one row per section.

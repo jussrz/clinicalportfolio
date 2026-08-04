@@ -1,53 +1,36 @@
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import PageHero from '../../components/PageHero'
 import Reveal from '../../components/Reveal'
-import { LoadState, Modal } from '../../components/ui'
+import { LoadState } from '../../components/ui'
 import { useSupabaseTable } from '../../lib/useSupabaseTable'
-import { GROUP_NAME } from '../../data/group'
+import { initials } from '../../lib/avatar'
+import { GROUP_NAME, studentFullName } from '../../data/group'
 
-function initials(name) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return '?'
-  return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join('')
-}
-
-/** Clickable when there's a bio to expand (opens the full text in a modal,
- * same click-to-expand pattern as the Department page's cards); static
- * otherwise, since there's nothing to expand into. */
-function MemberCard({ name, bio, onOpen }) {
-  const header = (
-    <div className="flex items-center gap-3">
-      <div className="shrink-0 w-11 h-11 grid place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-display font-semibold">
-        {initials(name)}
-      </div>
-      <p className="font-display text-base font-semibold text-ink-900">{name}</p>
-    </div>
-  )
-
-  if (!bio) {
-    return (
-      <div className="rounded-2xl border border-ink-200/70 bg-white card-shadow p-5 sm:p-6">
-        {header}
-        <p className="text-sm text-ink-400 italic mt-3">Contribution summary coming soon.</p>
-      </div>
-    )
-  }
-
+/** Cards only show a name and photo — the actual contribution content (cases
+ * logged plus any written reflection) lives on that student's own detail
+ * page, same click-through-to-a-page pattern as Selected Case Reflections. */
+function MemberCard({ name, photoUrl, to }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="w-full text-left rounded-2xl border border-ink-200/70 bg-white card-shadow card-shadow-hover p-5 sm:p-6"
+    <Link
+      to={to}
+      className="w-full text-left rounded-2xl border border-ink-200/70 bg-white card-shadow card-shadow-hover p-5 sm:p-6 block"
     >
-      {header}
-      <p className="text-sm text-ink-600 mt-3 leading-relaxed line-clamp-4 whitespace-pre-line break-words">{bio}</p>
-    </button>
+      <div className="flex items-center gap-3">
+        {photoUrl ? (
+          <img src={photoUrl} alt="" className="shrink-0 w-11 h-11 rounded-full object-cover" />
+        ) : (
+          <div className="shrink-0 w-11 h-11 grid place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-display font-semibold">
+            {initials(name)}
+          </div>
+        )}
+        <p className="font-display text-base font-semibold text-ink-900">{name}</p>
+      </div>
+    </Link>
   )
 }
 
 export default function IndividualContribution() {
   const { rows, status, error } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
-  const [openRow, setOpenRow] = useState(null)
 
   return (
     <div>
@@ -67,25 +50,15 @@ export default function IndividualContribution() {
             {rows.map((row, i) => (
               <Reveal key={row.id} delay={i * 50}>
                 <MemberCard
-                  name={row.student_name || 'Unnamed student'}
-                  bio={row.contribution_summary}
-                  onOpen={() => setOpenRow(row)}
+                  name={row.student_name ? studentFullName(row.student_name) : 'Unnamed student'}
+                  photoUrl={row.photo_url}
+                  to={`/individual-contribution/${row.id}`}
                 />
               </Reveal>
             ))}
           </div>
         )}
       </LoadState>
-
-      <Modal
-        open={Boolean(openRow)}
-        onClose={() => setOpenRow(null)}
-        title={openRow?.student_name || 'Unnamed student'}
-      >
-        <p className="text-sm text-ink-700 leading-relaxed whitespace-pre-line break-words">
-          {openRow?.contribution_summary}
-        </p>
-      </Modal>
     </div>
   )
 }

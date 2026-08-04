@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { departments } from '../data/departments'
-import { GROUP_NAME, SCHOOL_NAME } from '../data/group'
+import { GROUP_NAME, SCHOOL_NAME, studentFullName } from '../data/group'
 import { useCurrentMember } from '../lib/useCurrentMember'
+import { useSupabaseTable } from '../lib/useSupabaseTable'
+import { initials } from '../lib/avatar'
 import { Icon } from './Icon'
 
 const navLinkClass = (collapsed) => ({ isActive }) =>
@@ -154,6 +156,7 @@ export default function Layout() {
     return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === 'true'
   })
   const { member, login, logout } = useCurrentMember()
+  const { rows: contributionRows } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
 
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(collapsed))
@@ -165,6 +168,8 @@ export default function Layout() {
     return <MemberGate onSubmit={login} />
   }
 
+  const photoUrl = contributionRows.find((r) => r.student_name === member)?.photo_url
+
   return (
     <div className="min-h-screen lg:flex">
       {/* Desktop sidebar */}
@@ -175,7 +180,7 @@ export default function Layout() {
       >
         <SidebarHeader collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
         <SidebarNav collapsed={collapsed} deptOpen={deptOpen} setDeptOpen={setDeptOpen} onExpand={() => setCollapsed(false)} />
-        <SidebarFooter collapsed={collapsed} member={member} onLogout={logout} />
+        <SidebarFooter collapsed={collapsed} member={member} photoUrl={photoUrl} onLogout={logout} />
       </aside>
 
       {/* Mobile top bar */}
@@ -200,7 +205,7 @@ export default function Layout() {
             <div onClick={() => setMobileOpen(false)}>
               <SidebarNav collapsed={false} deptOpen={deptOpen} setDeptOpen={setDeptOpen} onExpand={() => {}} />
             </div>
-            <SidebarFooter collapsed={false} member={member} onLogout={logout} />
+            <SidebarFooter collapsed={false} member={member} photoUrl={photoUrl} onLogout={logout} />
           </aside>
         </div>
       )}
@@ -269,15 +274,15 @@ function SidebarHeader({ collapsed, onToggle }) {
   )
 }
 
-function SidebarFooter({ collapsed, member, onLogout }) {
+function SidebarFooter({ collapsed, member, photoUrl, onLogout }) {
   if (collapsed) {
     return (
       <div className="px-3 py-4 border-t border-white/10 flex flex-col items-center gap-2">
         <div
-          title={`Editing as ${member}`}
-          className="w-7 h-7 grid place-items-center rounded-full bg-white/10 text-[11px] font-semibold text-white"
+          title={`Editing as ${studentFullName(member)}`}
+          className="w-7 h-7 rounded-full overflow-hidden grid place-items-center bg-white/10 text-[11px] font-semibold text-white"
         >
-          {member?.[0]?.toUpperCase()}
+          {photoUrl ? <img src={photoUrl} alt="" className="w-full h-full object-cover" /> : initials(studentFullName(member))}
         </div>
         <Link
           to="/"
@@ -293,10 +298,15 @@ function SidebarFooter({ collapsed, member, onLogout }) {
   return (
     <div className="px-4 py-4 border-t border-white/10 text-xs text-brand-200/60 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-brand-100">
-          Editing as <span className="font-semibold text-white">{member}</span>
-        </p>
-        <button type="button" onClick={onLogout} className="font-medium text-brand-200/80 hover:text-white transition-colors">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="shrink-0 w-8 h-8 rounded-full overflow-hidden grid place-items-center bg-white/10 text-xs font-semibold text-white">
+            {photoUrl ? <img src={photoUrl} alt="" className="w-full h-full object-cover" /> : initials(studentFullName(member))}
+          </div>
+          <p className="text-brand-100 truncate">
+            Editing as <span className="font-semibold text-white">{studentFullName(member)}</span>
+          </p>
+        </div>
+        <button type="button" onClick={onLogout} className="shrink-0 font-medium text-brand-200/80 hover:text-white transition-colors">
           Exit
         </button>
       </div>

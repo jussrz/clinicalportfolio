@@ -6,7 +6,7 @@ import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { useCaseStats } from '../lib/useCaseStats'
 import { DEPARTMENT_OPTIONS, CLINICAL_AREA_OPTIONS } from '../data/options'
-import { SCHOOL_NAME_SHORT, ROTATION_LABEL } from '../data/group'
+import { SCHOOL_NAME_SHORT, ROTATION_LABEL, GROUP_MEMBERS, studentFullName } from '../data/group'
 import { formatDateRange } from '../lib/date'
 import { underlinedField } from '../lib/pdf'
 import { roleLabel } from '../lib/caseLog'
@@ -53,7 +53,10 @@ function CaseLogFields({ values, onChange }) {
       <FieldRow cols={3}>
         <Field label="Patient Code" placeholder="e.g., Pt-001, no real identifiers" value={values.patient_code} onChange={(e) => set('patient_code', e.target.value)} />
         <Field label="Age/Sex" placeholder="e.g., 45/M" value={values.age_sex} onChange={(e) => set('age_sex', e.target.value)} />
-        <Field label="Student Assigned" value={values.student_assigned} onChange={(e) => set('student_assigned', e.target.value)} />
+        <SelectField label="Student Assigned" value={values.student_assigned} onChange={(e) => set('student_assigned', e.target.value)}>
+          <option value="" disabled>Select student</option>
+          {GROUP_MEMBERS.map((m) => <option key={m} value={m}>{studentFullName(m)}</option>)}
+        </SelectField>
       </FieldRow>
       <FieldRow>
         <Field label="Chief Complaint / Reason for Consult" value={values.chief_complaint} onChange={(e) => set('chief_complaint', e.target.value)} />
@@ -118,7 +121,7 @@ async function exportPdf(rows, record) {
       row.chief_complaint || '',
       row.working_diagnosis || '',
       roleLabel(row),
-      row.student_assigned || '',
+      row.student_assigned ? studentFullName(row.student_assigned) : '',
     ]),
     styles: { fontSize: 8, cellPadding: 4, lineColor: [0, 0, 0], lineWidth: 0.5, textColor: [0, 0, 0] },
     headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
@@ -145,7 +148,7 @@ function CaseLogRow({ row, index, onSelect }) {
       <td className="truncate" title={row.chief_complaint}>{row.chief_complaint || '—'}</td>
       <td className="truncate" title={row.working_diagnosis}>{row.working_diagnosis || '—'}</td>
       <td className="truncate">{roleLabel(row) || '—'}</td>
-      <td className="truncate" title={row.student_assigned}>{row.student_assigned || '—'}</td>
+      <td className="truncate" title={row.student_assigned ? studentFullName(row.student_assigned) : ''}>{row.student_assigned ? studentFullName(row.student_assigned) : '—'}</td>
     </tr>
   )
 }
@@ -213,7 +216,7 @@ function CaseLogDetailModal({ entry, onSave, onDelete, onClose, onExport, export
               <DetailField label="Clinical Area" value={entry.clinical_area} />
               <DetailField label="Patient Code" value={entry.patient_code} />
               <DetailField label="Age/Sex" value={entry.age_sex} />
-              <DetailField label="Student Assigned" value={entry.student_assigned} />
+              <DetailField label="Student Assigned" value={entry.student_assigned ? studentFullName(entry.student_assigned) : ''} />
               <DetailField label="Student Role" value={roleLabel(entry)} />
             </div>
             <DetailField label="Chief Complaint / Reason for Consult" value={entry.chief_complaint} />

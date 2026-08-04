@@ -7,6 +7,7 @@ import { LoadState, Modal } from '../../components/ui'
 import ShowcaseAnswer from '../../components/ShowcaseAnswer'
 import { departmentBySlug } from '../../data/departments'
 import { useDepartmentNotes } from '../../lib/useDepartmentNotes'
+import { useDepartmentCases } from '../../lib/useDepartmentCases'
 
 const fields = [
   { key: 'objectives', title: 'Department-Specific Objectives', icon: 'compass' },
@@ -16,7 +17,9 @@ const fields = [
   { key: 'learning_points', title: 'Key Learning Points', icon: 'list' },
   { key: 'reflection', title: 'Department-Specific Reflection', icon: 'message', feature: true },
 ]
-const sectionKeys = fields.map((f) => f.key)
+// "cases" is excluded from department_notes — it's derived live from the
+// Group Case Log Census (see useDepartmentCases) instead of hand-typed.
+const sectionKeys = fields.filter((f) => f.key !== 'cases').map((f) => f.key)
 
 export default function DepartmentShowcase() {
   const { slug } = useParams()
@@ -68,8 +71,14 @@ function DepartmentCard({ field, value, delay, onOpen }) {
 
 function DepartmentShowcaseContent({ slug, dept }) {
   const { values, status } = useDepartmentNotes(slug, sectionKeys)
+  const { cases } = useDepartmentCases(dept.logDepartment)
   const [openKey, setOpenKey] = useState(null)
   const openField = fields.find((f) => f.key === openKey)
+
+  const casesText = cases
+    .map((c) => `${c.date_seen ? `${c.date_seen} — ` : ''}${c.working_diagnosis}`)
+    .join('\n')
+  const displayValues = { ...values, cases: casesText }
 
   return (
     <div>
@@ -78,13 +87,13 @@ function DepartmentShowcaseContent({ slug, dept }) {
       <LoadState status={status} error="Couldn't load this department's notes.">
         <div className="grid sm:grid-cols-2 gap-4">
           {fields.map((f, i) => (
-            <DepartmentCard key={f.key} field={f} value={values[f.key]} delay={i * 40} onOpen={() => setOpenKey(f.key)} />
+            <DepartmentCard key={f.key} field={f} value={displayValues[f.key]} delay={i * 40} onOpen={() => setOpenKey(f.key)} />
           ))}
         </div>
       </LoadState>
 
       <Modal open={Boolean(openField)} onClose={() => setOpenKey(null)} title={openField?.title}>
-        <ShowcaseAnswer value={openField ? values[openField.key] : ''} feature={openField?.feature} />
+        <ShowcaseAnswer value={openField ? displayValues[openField.key] : ''} feature={openField?.feature} />
       </Modal>
     </div>
   )

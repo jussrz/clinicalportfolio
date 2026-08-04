@@ -25,6 +25,7 @@ import ShowcaseCasePresentation from './pages/showcase/CasePresentation'
 import ShowcaseClinicalSkills from './pages/showcase/ClinicalSkills'
 import ShowcaseFeedbackActionPlan from './pages/showcase/FeedbackActionPlan'
 import ShowcaseIndividualContribution from './pages/showcase/IndividualContribution'
+import IndividualContributionDetail from './pages/showcase/IndividualContributionDetail'
 import ShowcaseGroupReflections from './pages/showcase/GroupReflections'
 
 function App() {
@@ -42,6 +43,7 @@ function App() {
           <Route path="clinical-skills" element={<ShowcaseClinicalSkills />} />
           <Route path="feedback-action-plan" element={<ShowcaseFeedbackActionPlan />} />
           <Route path="individual-contribution" element={<ShowcaseIndividualContribution />} />
+          <Route path="individual-contribution/:id" element={<IndividualContributionDetail />} />
           <Route path="group-reflections" element={<ShowcaseGroupReflections />} />
         </Route>
 

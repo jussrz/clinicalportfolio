@@ -13,6 +13,7 @@ export const departments = [
     short: 'Peds',
     blurb: 'Well-child care, common pediatric illnesses, growth & development.',
     image: unsplash('photo-1676313030076-4ac0b37050fd'),
+    logDepartment: 'Pediatrics',
   },
   {
     slug: 'internal-medicine',
@@ -20,6 +21,7 @@ export const departments = [
     short: 'IM',
     blurb: 'Adult medicine, chronic disease management, ward-based care.',
     image: unsplash('photo-1532938911079-1b06ac7ceec7'),
+    logDepartment: 'Internal Medicine',
   },
   {
     slug: 'obstetrics-gynecology',
@@ -27,6 +29,7 @@ export const departments = [
     short: 'OB-Gyne',
     blurb: 'Antenatal care, labor and delivery, gynecologic conditions.',
     image: unsplash('photo-1457342813143-a1ae27448a82'),
+    logDepartment: 'OB-GYNE',
   },
   {
     slug: 'family-community-medicine',
@@ -34,6 +37,7 @@ export const departments = [
     short: 'FCM',
     blurb: 'Primary care, community health, continuity of care across the lifespan.',
     image: unsplash('photo-1758691462666-6470b740f544'),
+    logDepartment: 'Family & Community Medicine',
   },
   {
     slug: 'surgery',
@@ -41,6 +45,7 @@ export const departments = [
     short: 'Surgery',
     blurb: 'Pre-, intra-, and post-operative care; surgical decision-making.',
     image: unsplash('photo-1640876777012-bdb00a6323e2'),
+    logDepartment: 'Surgery',
   },
 ]
 
