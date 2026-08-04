@@ -17,7 +17,7 @@ export default function ShowcaseAnswer({ label, value, feature }) {
       {feature ? (
         <Pullquote>{value}</Pullquote>
       ) : (
-        <p className="max-w-2xl text-[15px] leading-relaxed text-ink-700 whitespace-pre-line">{value}</p>
+        <p className="max-w-2xl text-[15px] leading-relaxed text-ink-700 whitespace-pre-line break-words">{value}</p>
       )}
     </div>
   )

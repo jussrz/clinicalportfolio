@@ -3,6 +3,7 @@ import { Area, Button, IconTrash, ListField } from './ui'
 import { ReflectionReadout } from './ReflectionReadout'
 import { underlinedField } from '../lib/pdf'
 import { roleLabel } from '../lib/caseLog'
+import { SCHOOL_NAME_SHORT, ROTATION_LABEL } from '../data/group'
 
 const emptyContent = {
   brief_summary: '',
@@ -136,9 +137,9 @@ export async function exportReflectionPdf(reflection, caseEntry) {
   y += 16
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text('USM College of Medicine', pageWidth / 2, y, { align: 'center' })
+  doc.text(SCHOOL_NAME_SHORT, pageWidth / 2, y, { align: 'center' })
   y += 14
-  doc.text('Clinical Rotation – SY 2026–2027', pageWidth / 2, y, { align: 'center' })
+  doc.text(ROTATION_LABEL, pageWidth / 2, y, { align: 'center' })
   y += 32
 
   doc.setFontSize(10)

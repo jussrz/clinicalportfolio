@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { departments } from '../data/departments'
-import { GROUP_NAME } from '../data/group'
+import { GROUP_NAME, SCHOOL_NAME } from '../data/group'
+import { useCurrentMember } from '../lib/useCurrentMember'
 import { Icon } from './Icon'
 
 const navLinkClass = (collapsed) => ({ isActive }) =>
@@ -95,6 +96,56 @@ function SidebarNav({ collapsed, deptOpen, setDeptOpen, onExpand }) {
   )
 }
 
+/** Blocks Studio access until a roster surname is typed in. This is an
+ * identity gate, not real authentication — it exists to remember who's
+ * editing and label their entries, not to lock anyone out. */
+function MemberGate({ onSubmit }) {
+  const [value, setValue] = useState('')
+  const [error, setError] = useState('')
+  const sidebarBg = 'bg-gradient-to-b from-[#1f5b34] via-brand-900 to-[#0e2a19]'
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    const matched = onSubmit(value)
+    if (!matched) setError('Surname not recognized. Check the spelling and try again.')
+  }
+
+  return (
+    <div className={`min-h-screen grid place-items-center px-4 ${sidebarBg}`}>
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-4">
+        <div>
+          <p className="font-display text-lg font-semibold text-ink-800">Edit Mode</p>
+          <p className="text-sm text-ink-500 mt-1">
+            Type your surname to edit the portfolio with your own answers and findings.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value)
+              setError('')
+            }}
+            placeholder="e.g. Suarez"
+            className="field-input"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-brand-700 text-white text-sm font-medium py-2 hover:bg-brand-800 transition-colors"
+          >
+            Continue
+          </button>
+        </form>
+        <Link to="/" className="block text-center text-xs text-ink-400 hover:text-ink-600">
+          ← Back to Public Portfolio
+        </Link>
+      </div>
+    </div>
+  )
+}
+
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [deptOpen, setDeptOpen] = useState(true)
@@ -102,12 +153,17 @@ export default function Layout() {
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === 'true'
   })
+  const { member, login, logout } = useCurrentMember()
 
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(collapsed))
   }, [collapsed])
 
   const sidebarBg = 'bg-gradient-to-b from-[#1f5b34] via-brand-900 to-[#0e2a19]'
+
+  if (!member) {
+    return <MemberGate onSubmit={login} />
+  }
 
   return (
     <div className="min-h-screen lg:flex">
@@ -119,7 +175,7 @@ export default function Layout() {
       >
         <SidebarHeader collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)} />
         <SidebarNav collapsed={collapsed} deptOpen={deptOpen} setDeptOpen={setDeptOpen} onExpand={() => setCollapsed(false)} />
-        <SidebarFooter collapsed={collapsed} />
+        <SidebarFooter collapsed={collapsed} member={member} onLogout={logout} />
       </aside>
 
       {/* Mobile top bar */}
@@ -144,7 +200,7 @@ export default function Layout() {
             <div onClick={() => setMobileOpen(false)}>
               <SidebarNav collapsed={false} deptOpen={deptOpen} setDeptOpen={setDeptOpen} onExpand={() => {}} />
             </div>
-            <SidebarFooter collapsed={false} />
+            <SidebarFooter collapsed={false} member={member} onLogout={logout} />
           </aside>
         </div>
       )}
@@ -213,10 +269,16 @@ function SidebarHeader({ collapsed, onToggle }) {
   )
 }
 
-function SidebarFooter({ collapsed }) {
+function SidebarFooter({ collapsed, member, onLogout }) {
   if (collapsed) {
     return (
-      <div className="px-3 py-4 border-t border-white/10 flex justify-center">
+      <div className="px-3 py-4 border-t border-white/10 flex flex-col items-center gap-2">
+        <div
+          title={`Editing as ${member}`}
+          className="w-7 h-7 grid place-items-center rounded-full bg-white/10 text-[11px] font-semibold text-white"
+        >
+          {member?.[0]?.toUpperCase()}
+        </div>
         <Link
           to="/"
           aria-label="View public portfolio"
@@ -230,10 +292,18 @@ function SidebarFooter({ collapsed }) {
   }
   return (
     <div className="px-4 py-4 border-t border-white/10 text-xs text-brand-200/60 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-brand-100">
+          Editing as <span className="font-semibold text-white">{member}</span>
+        </p>
+        <button type="button" onClick={onLogout} className="font-medium text-brand-200/80 hover:text-white transition-colors">
+          Exit
+        </button>
+      </div>
       <Link to="/" className="flex items-center gap-1.5 font-medium text-brand-100 hover:text-white transition-colors">
         View Public Portfolio <Icon name="arrowRight" className="w-3.5 h-3.5" />
       </Link>
-      <p>University of Southern Mindanao — College of Medicine</p>
+      <p>{SCHOOL_NAME}</p>
     </div>
   )
 }

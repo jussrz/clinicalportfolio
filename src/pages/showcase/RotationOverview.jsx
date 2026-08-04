@@ -1,87 +1,194 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import PageHero from '../../components/PageHero'
 import Reveal from '../../components/Reveal'
-import { Section } from '../../components/ui'
-import ShowcaseAnswer from '../../components/ShowcaseAnswer'
+import { Modal } from '../../components/ui'
+import { Icon } from '../../components/Icon'
 import { useSupabaseRecord } from '../../lib/useSupabaseRecord'
 import { departments } from '../../data/departments'
 
 const deptColumn = (slug) => `obj_${slug.replace(/-/g, '_')}`
 
+// Newline-based split, preserving order — Studio authors both the schedule
+// and case topics one line/bullet per item.
+function splitLines(text) {
+  return (text || '').split('\n').map((l) => l.trim()).filter(Boolean)
+}
+
 export default function RotationOverview() {
   const { record, status } = useSupabaseRecord('rotation_overview', 1)
+  const [modal, setModal] = useState(null) // 'schedule' | 'topics' | null
+
+  const hasDeptObjectives = departments.some((d) => record[deptColumn(d.slug)])
   const hasContent =
     status === 'ready' &&
-    (record.general_objectives || record.schedule || record.case_topics || record.learning_goals ||
-      departments.some((d) => record[deptColumn(d.slug)]))
+    (record.general_objectives || record.schedule || record.case_topics || record.learning_goals || hasDeptObjectives)
+
+  const scheduleLines = splitLines(record.schedule)
+  const topicTags = splitLines(record.case_topics)
 
   return (
     <div>
       <PageHero
-        eyebrow="Rotation Overview"
+        eyebrow="Rotation Journey"
         title="Rotation Overview"
         description="What we set out to learn, and how our time was structured across the clinical rotation."
       />
 
-      {hasContent ? (
-        <div className="space-y-6">
-          {record.general_objectives && (
-            <Reveal>
-              <Section variant="showcase" title="General Objectives">
-                <ShowcaseAnswer value={record.general_objectives} />
-              </Section>
-            </Reveal>
-          )}
+      {status === 'ready' && !hasContent && (
+        <p className="text-sm text-ink-400 italic">
+          Rotation objectives and schedule will appear here once the group adds them.
+        </p>
+      )}
 
-          {departments.some((d) => record[deptColumn(d.slug)]) && (
-            <Reveal>
-              <Section variant="showcase" title="Objectives by Department">
-                <div className="space-y-5">
-                  {departments.map((d) => {
-                    const value = record[deptColumn(d.slug)]
-                    if (!value) return null
-                    return (
-                      <div key={d.slug}>
-                        <p className="text-sm font-semibold text-ink-800 mb-1.5">{d.name}</p>
-                        <ShowcaseAnswer value={value} />
-                      </div>
-                    )
-                  })}
+      {record.general_objectives && (
+        <Reveal className="mb-10">
+          <div className="max-w-3xl border-l-4 border-brand-400 pl-5 sm:pl-6">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-2">Our Objectives</p>
+            <p className="font-display text-lg sm:text-xl leading-relaxed text-ink-800">
+              {record.general_objectives}
+            </p>
+          </div>
+        </Reveal>
+      )}
+
+      {(scheduleLines.length > 0 || topicTags.length > 0) && (
+        <Reveal className="mb-10">
+          <div className="grid sm:grid-cols-2 gap-4">
+            {scheduleLines.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setModal('schedule')}
+                className="text-left rounded-2xl border border-ink-200/70 bg-white card-shadow card-shadow-hover p-5 sm:p-6"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="shrink-0 w-10 h-10 grid place-items-center rounded-xl bg-brand-50 text-brand-700">
+                    <Icon name="calendar" className="w-5 h-5" />
+                  </div>
+                  <p className="font-display text-base font-semibold text-ink-900">Schedule &amp; Timeline</p>
                 </div>
-              </Section>
-            </Reveal>
-          )}
+                <p className="text-sm text-ink-500 leading-relaxed line-clamp-2">{scheduleLines[0]}</p>
+              </button>
+            )}
 
-          {record.schedule && (
-            <Reveal>
-              <Section variant="showcase" title="Schedule & Timeline">
-                <ShowcaseAnswer value={record.schedule} />
-              </Section>
-            </Reveal>
-          )}
+            {topicTags.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setModal('topics')}
+                className="text-left rounded-2xl border border-ink-200/70 bg-white card-shadow card-shadow-hover p-5 sm:p-6"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="shrink-0 w-10 h-10 grid place-items-center rounded-xl bg-brand-50 text-brand-700">
+                    <Icon name="list" className="w-5 h-5" />
+                  </div>
+                  <p className="font-display text-base font-semibold text-ink-900">Assigned Case Topics</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {topicTags.slice(0, 4).map((t, i) => (
+                    <span key={i} className="text-xs bg-brand-50 text-brand-700 rounded-full px-2.5 py-1">{t}</span>
+                  ))}
+                  {topicTags.length > 4 && (
+                    <span className="text-xs text-ink-400 px-1 py-1">+{topicTags.length - 4} more</span>
+                  )}
+                </div>
+              </button>
+            )}
+          </div>
+        </Reveal>
+      )}
 
-          {record.case_topics && (
-            <Reveal>
-              <Section variant="showcase" title="Assigned Case Topics">
-                <ShowcaseAnswer value={record.case_topics} />
-              </Section>
-            </Reveal>
-          )}
+      {hasDeptObjectives && (
+        <Reveal className="mb-10">
+          <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-3">Objectives by Department</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {departments.map((d, i) => {
+              const value = record[deptColumn(d.slug)]
+              if (!value) return null
+              return (
+                <Reveal key={d.slug} delay={i * 60}>
+                  <Link
+                    to={`/departments/${d.slug}`}
+                    className="group flex flex-col h-full rounded-2xl overflow-hidden border border-ink-200/70 bg-white card-shadow card-shadow-hover"
+                  >
+                    <div className="relative h-28 shrink-0 overflow-hidden">
+                      <img
+                        src={d.image}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.05]"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0e2a19]/75 via-[#0e2a19]/10 to-transparent" />
+                      <p className="absolute bottom-2 left-3 font-display text-sm font-semibold text-white">{d.name}</p>
+                    </div>
+                    <div className="p-4 flex-1">
+                      <p className="text-sm text-ink-600 leading-relaxed line-clamp-4">{value}</p>
+                    </div>
+                  </Link>
+                </Reveal>
+              )
+            })}
+          </div>
+        </Reveal>
+      )}
 
-          {record.learning_goals && (
-            <Reveal>
-              <Section variant="showcase" title="Group Learning Goals">
-                <ShowcaseAnswer value={record.learning_goals} feature />
-              </Section>
-            </Reveal>
+      {record.learning_goals && (
+        <Reveal>
+          <div className="relative overflow-hidden rounded-2xl px-6 py-10 sm:px-14 sm:py-16 text-center bg-gradient-to-br from-[#1f5b34] via-brand-800 to-[#0e2a19]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand-200 mb-4">Group Learning Goals</p>
+            <p className="max-w-2xl mx-auto font-display italic text-xl sm:text-2xl leading-relaxed text-white">
+              “{record.learning_goals}”
+            </p>
+          </div>
+        </Reveal>
+      )}
+
+      {/* Modal content below never mounts until clicked open, so it's absent
+          from print output. Mirror the full lists here, screen-hidden but
+          print-visible, so a printed/PDF'd page isn't truncated to the
+          teaser card's first line. */}
+      {(scheduleLines.length > 0 || topicTags.length > 0) && (
+        <div className="hidden print:block mb-10">
+          {scheduleLines.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-3">Schedule &amp; Timeline</p>
+              {scheduleLines.map((line, i) => (
+                <p key={i} className="text-sm text-ink-700 leading-relaxed">{line}</p>
+              ))}
+            </div>
+          )}
+          {topicTags.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-brand-600 mb-3">Assigned Case Topics</p>
+              {topicTags.map((t, i) => (
+                <p key={i} className="text-sm text-ink-700 leading-relaxed">{t}</p>
+              ))}
+            </div>
           )}
         </div>
-      ) : (
-        status === 'ready' && (
-          <p className="text-sm text-ink-400 italic">
-            Rotation objectives and schedule will appear here once the group adds them.
-          </p>
-        )
       )}
+
+      <Modal open={modal === 'schedule'} onClose={() => setModal(null)} title="Schedule & Timeline">
+        <div>
+          {scheduleLines.map((line, i) => (
+            <div key={i} className="flex gap-3">
+              <div className="flex flex-col items-center">
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-600 mt-1.5 shrink-0" />
+                {i < scheduleLines.length - 1 && <span className="w-px flex-1 bg-ink-200 mt-1" />}
+              </div>
+              <p className="text-sm text-ink-700 leading-relaxed pb-5">{line}</p>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal open={modal === 'topics'} onClose={() => setModal(null)} title="Assigned Case Topics">
+        <div className="flex flex-wrap gap-2">
+          {topicTags.map((t, i) => (
+            <span key={i} className="text-sm bg-brand-50 text-brand-700 rounded-full px-3 py-1.5">{t}</span>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }

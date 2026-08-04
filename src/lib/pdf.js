@@ -1,3 +1,5 @@
+import { SCHOOL_NAME_SHORT, ROTATION_LABEL } from '../data/group'
+
 // Prints "Label: value" with the value sitting on a drawn underline, like a
 // fill-in-the-blank line on a printed form (blank if there's no value yet).
 export function underlinedField(doc, label, value, x, y, lineEndX) {
@@ -31,8 +33,8 @@ function drawLetterhead(doc, pageWidth, title) {
   doc.text(title, pageWidth / 2, 56, { align: 'center' })
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text('USM College of Medicine', pageWidth / 2, 72, { align: 'center' })
-  doc.text('Clinical Rotation – SY 2026–2027', pageWidth / 2, 86, { align: 'center' })
+  doc.text(SCHOOL_NAME_SHORT, pageWidth / 2, 72, { align: 'center' })
+  doc.text(ROTATION_LABEL, pageWidth / 2, 86, { align: 'center' })
 }
 
 /** A portrait PDF with the app's standard plain letterhead followed by a

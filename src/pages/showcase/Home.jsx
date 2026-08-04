@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
-import { GROUP_NAME } from '../../data/group'
-import { departments } from '../../data/departments'
+import { GROUP_NAME, SCHOOL_NAME } from '../../data/group'
+import { departments, HOME_HERO_IMAGE } from '../../data/departments'
 import PageHero from '../../components/PageHero'
 import Reveal from '../../components/Reveal'
 import { Section } from '../../components/ui'
-
-const HERO_IMAGE = 'https://images.unsplash.com/photo-1758691462268-fbe66c4f3e28?fm=jpg&q=70&w=2000&auto=format&fit=crop'
 
 const purposeItems = [
   'Document our clinical exposure and learning experiences.',
@@ -22,11 +20,11 @@ export default function Home() {
       <PageHero
         size="xl"
         eyebrow="Clinical Rotation Portfolio"
-        image={HERO_IMAGE}
+        image={HOME_HERO_IMAGE}
         title={<>The Clinical Journey of <em className="font-display italic text-brand-200">{GROUP_NAME}</em></>}
         description="A record of our patient encounters, clinical reasoning, and reflections across Internal Medicine, Surgery, Pediatrics, Obstetrics and Gynecology, and Family and Community Medicine."
       >
-        <p className="mt-4 text-[15px] text-brand-100/90">University of Southern Mindanao – College of Medicine</p>
+        <p className="mt-4 text-[15px] text-brand-100/90">{SCHOOL_NAME}</p>
       </PageHero>
 
       <Reveal className="mb-10">

@@ -16,6 +16,8 @@ export const icons = {
   chevron: 'm9 6 6 6-6 6',
   arrowRight: 'M5 12h14M13 6l6 6-6 6',
   edit: 'M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z',
+  calendar: 'M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5v-13ZM4 9.5h16M8 3v3M16 3v3',
+  list: 'M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01',
 }
 
 export function Icon({ name, className = 'w-[18px] h-[18px]' }) {

@@ -17,11 +17,15 @@ import GroupReflections from './pages/GroupReflections'
 // Public showcase pages
 import Home from './pages/showcase/Home'
 import RotationOverview from './pages/showcase/RotationOverview'
+import ShowcaseCaseLogCensus from './pages/showcase/CaseLogCensus'
 import DepartmentShowcase from './pages/showcase/DepartmentShowcase'
-import CaseStudies from './pages/showcase/CaseStudies'
+import ShowcaseCaseReflections from './pages/showcase/CaseReflections'
 import CaseStudyDetail from './pages/showcase/CaseStudyDetail'
-import GrowthReflections from './pages/showcase/GrowthReflections'
-import Team from './pages/showcase/Team'
+import ShowcaseCasePresentation from './pages/showcase/CasePresentation'
+import ShowcaseClinicalSkills from './pages/showcase/ClinicalSkills'
+import ShowcaseFeedbackActionPlan from './pages/showcase/FeedbackActionPlan'
+import ShowcaseIndividualContribution from './pages/showcase/IndividualContribution'
+import ShowcaseGroupReflections from './pages/showcase/GroupReflections'
 
 function App() {
   return (
@@ -30,11 +34,15 @@ function App() {
         <Route element={<PortfolioLayout />}>
           <Route index element={<Home />} />
           <Route path="rotation-overview" element={<RotationOverview />} />
+          <Route path="case-log-census" element={<ShowcaseCaseLogCensus />} />
           <Route path="departments/:slug" element={<DepartmentShowcase />} />
-          <Route path="case-studies" element={<CaseStudies />} />
-          <Route path="case-studies/:id" element={<CaseStudyDetail />} />
-          <Route path="growth-reflections" element={<GrowthReflections />} />
-          <Route path="team" element={<Team />} />
+          <Route path="case-reflections" element={<ShowcaseCaseReflections />} />
+          <Route path="case-reflections/:id" element={<CaseStudyDetail />} />
+          <Route path="case-presentation" element={<ShowcaseCasePresentation />} />
+          <Route path="clinical-skills" element={<ShowcaseClinicalSkills />} />
+          <Route path="feedback-action-plan" element={<ShowcaseFeedbackActionPlan />} />
+          <Route path="individual-contribution" element={<ShowcaseIndividualContribution />} />
+          <Route path="group-reflections" element={<ShowcaseGroupReflections />} />
         </Route>
 
         <Route path="studio" element={<Layout />}>

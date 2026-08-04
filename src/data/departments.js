@@ -3,6 +3,9 @@
 // loads a similarly sized asset.
 const unsplash = (photoId) => `https://images.unsplash.com/${photoId}?fm=jpg&q=70&w=1600&auto=format&fit=crop`
 
+// Shared hero banner for both Home pages (Studio + showcase).
+export const HOME_HERO_IMAGE = 'https://images.unsplash.com/photo-1758691462268-fbe66c4f3e28?fm=jpg&q=70&w=2000&auto=format&fit=crop'
+
 export const departments = [
   {
     slug: 'pediatrics',
@@ -12,13 +15,6 @@ export const departments = [
     image: unsplash('photo-1676313030076-4ac0b37050fd'),
   },
   {
-    slug: 'family-community-medicine',
-    name: 'Family and Community Medicine',
-    short: 'FCM',
-    blurb: 'Primary care, community health, continuity of care across the lifespan.',
-    image: unsplash('photo-1758691462666-6470b740f544'),
-  },
-  {
     slug: 'internal-medicine',
     name: 'Internal Medicine',
     short: 'IM',
@@ -26,18 +22,25 @@ export const departments = [
     image: unsplash('photo-1532938911079-1b06ac7ceec7'),
   },
   {
-    slug: 'surgery',
-    name: 'Surgery',
-    short: 'Surgery',
-    blurb: 'Pre-, intra-, and post-operative care; surgical decision-making.',
-    image: unsplash('photo-1640876777012-bdb00a6323e2'),
-  },
-  {
     slug: 'obstetrics-gynecology',
     name: 'Obstetrics and Gynecology',
     short: 'OB-Gyne',
     blurb: 'Antenatal care, labor and delivery, gynecologic conditions.',
     image: unsplash('photo-1457342813143-a1ae27448a82'),
+  },
+  {
+    slug: 'family-community-medicine',
+    name: 'Family and Community Medicine',
+    short: 'FCM',
+    blurb: 'Primary care, community health, continuity of care across the lifespan.',
+    image: unsplash('photo-1758691462666-6470b740f544'),
+  },
+  {
+    slug: 'surgery',
+    name: 'Surgery',
+    short: 'Surgery',
+    blurb: 'Pre-, intra-, and post-operative care; surgical decision-making.',
+    image: unsplash('photo-1640876777012-bdb00a6323e2'),
   },
 ]
 

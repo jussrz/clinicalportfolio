@@ -6,6 +6,7 @@ import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { useCaseStats } from '../lib/useCaseStats'
 import { DEPARTMENT_OPTIONS, CLINICAL_AREA_OPTIONS } from '../data/options'
+import { SCHOOL_NAME_SHORT, ROTATION_LABEL } from '../data/group'
 import { formatDateRange } from '../lib/date'
 import { underlinedField } from '../lib/pdf'
 import { roleLabel } from '../lib/caseLog'
@@ -88,9 +89,9 @@ async function exportPdf(rows, record) {
   y += 16
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text('USM College of Medicine', pageWidth / 2, y, { align: 'center' })
+  doc.text(SCHOOL_NAME_SHORT, pageWidth / 2, y, { align: 'center' })
   y += 14
-  doc.text('Clinical Rotation – SY 2026–2027', pageWidth / 2, y, { align: 'center' })
+  doc.text(ROTATION_LABEL, pageWidth / 2, y, { align: 'center' })
   y += 26
 
   doc.setFontSize(10)
@@ -300,7 +301,7 @@ export default function CaseLogCensus() {
         size="compact"
         eyebrow="Group Case Log Census"
         title="Clinical Rotation Case Log Census"
-        description="USM College of Medicine · Clinical Rotation – SY 2026–2027"
+        description={`${SCHOOL_NAME_SHORT} · ${ROTATION_LABEL}`}
       />
 
       <div className="space-y-6">

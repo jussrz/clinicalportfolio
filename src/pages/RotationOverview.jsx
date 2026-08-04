@@ -1,4 +1,4 @@
-import { Area, EditBar, LoadState, PageActions, Section } from '../components/ui'
+import { Area, EditBar, LoadState, ListField, PageActions, Section } from '../components/ui'
 import PageHero from '../components/PageHero'
 import Reveal from '../components/Reveal'
 import Pullquote from '../components/Pullquote'
@@ -25,71 +25,92 @@ export default function RotationOverview() {
         actions={<PageActions editing={editing} onEdit={start} />}
       />
 
-      <LoadState status={status} error="Couldn't load this page's data.">
-        <div className="space-y-6">
-          <Reveal>
-            <Section variant="showcase" title="General Objectives of the Clinical Rotation">
-              {editing ? (
-                <Area value={draft.general_objectives ?? ''} onChange={(e) => set('general_objectives', e.target.value)} minRows={4} />
-              ) : (
-                <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.general_objectives}</p>
-              )}
-            </Section>
-          </Reveal>
+      <Reveal>
+        <Section variant="showcase">
+          <LoadState status={status} error="Couldn't load this page's data.">
+            <div className="space-y-8">
+              <FieldGroup label="General Objectives of the Clinical Rotation">
+                {editing ? (
+                  <Area value={draft.general_objectives ?? ''} onChange={(e) => set('general_objectives', e.target.value)} minRows={4} />
+                ) : (
+                  <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.general_objectives}</p>
+                )}
+              </FieldGroup>
 
-          <Reveal>
-            <Section variant="showcase" title="Rotation-Specific Objectives per Department">
-              <div className="space-y-5">
-                {departments.map((d) => {
-                  const key = deptColumn(d.slug)
-                  return (
-                    <div key={d.slug}>
-                      <p className="text-sm font-semibold text-ink-800 mb-1.5">{d.name}</p>
-                      {editing ? (
-                        <Area value={draft[key] ?? ''} onChange={(e) => set(key, e.target.value)} minRows={3} />
-                      ) : (
-                        <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown[key]}</p>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </Section>
-          </Reveal>
+              <FieldGroup label="Rotation-Specific Objectives per Department">
+                <div className="space-y-5">
+                  {departments.map((d) => {
+                    const key = deptColumn(d.slug)
+                    return (
+                      <div key={d.slug}>
+                        <p className="text-sm font-semibold text-ink-800 mb-1.5">{d.name}</p>
+                        {editing ? (
+                          <Area value={draft[key] ?? ''} onChange={(e) => set(key, e.target.value)} minRows={3} />
+                        ) : (
+                          <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown[key]}</p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </FieldGroup>
 
-          <Reveal>
-            <Section variant="showcase" title="Clinical Rotation Schedule / Timeline">
-              {editing ? (
-                <Area value={draft.schedule ?? ''} onChange={(e) => set('schedule', e.target.value)} minRows={4} />
-              ) : (
-                <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.schedule}</p>
-              )}
-            </Section>
-          </Reveal>
+              <FieldGroup label="Clinical Rotation Schedule / Timeline">
+                {editing ? (
+                  <Area value={draft.schedule ?? ''} onChange={(e) => set('schedule', e.target.value)} minRows={4} />
+                ) : (
+                  <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.schedule}</p>
+                )}
+              </FieldGroup>
 
-          <Reveal>
-            <Section variant="showcase" title="Assigned Case Topics per Rotation Cycle">
-              {editing ? (
-                <Area value={draft.case_topics ?? ''} onChange={(e) => set('case_topics', e.target.value)} minRows={3} />
-              ) : (
-                <p className="text-[15px] leading-relaxed text-ink-500 italic whitespace-pre-line">{shown.case_topics}</p>
-              )}
-            </Section>
-          </Reveal>
+              <FieldGroup label="Assigned Case Topics per Rotation Cycle">
+                {editing ? (
+                  <ListField
+                    items={(draft.case_topics ?? '').split('\n')}
+                    onChange={(items) => set('case_topics', items.join('\n'))}
+                    placeholder="e.g., Acute abdominal pain workup"
+                    addLabel="Add case topic"
+                  />
+                ) : shown.case_topics ? (
+                  <ul className="space-y-2">
+                    {shown.case_topics.split('\n').filter(Boolean).map((topic, i) => (
+                      <li key={i} className="flex gap-2.5 text-[15px] leading-relaxed text-ink-500 italic">
+                        <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-brand-400 mt-2.5" />
+                        {topic}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </FieldGroup>
 
-          <Reveal>
-            <Section variant="showcase" title="Group Learning Goals">
-              {editing ? (
-                <Area value={draft.learning_goals ?? ''} onChange={(e) => set('learning_goals', e.target.value)} minRows={3} />
-              ) : (
-                <Pullquote>{shown.learning_goals}</Pullquote>
-              )}
-            </Section>
-          </Reveal>
+              <FieldGroup label="Group Learning Goals">
+                {editing ? (
+                  <Area value={draft.learning_goals ?? ''} onChange={(e) => set('learning_goals', e.target.value)} minRows={3} />
+                ) : (
+                  <Pullquote>{shown.learning_goals}</Pullquote>
+                )}
+              </FieldGroup>
 
-          <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
-        </div>
-      </LoadState>
+              <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
+            </div>
+          </LoadState>
+        </Section>
+      </Reveal>
+    </div>
+  )
+}
+
+/** One labeled block inside the single Rotation Overview card — same green
+ * accent-bar heading style as PromptGroup, so a multi-field page still reads
+ * as one simple form rather than a stack of separate boxed cards. */
+function FieldGroup({ label, children }) {
+  return (
+    <div>
+      <p className="flex items-baseline gap-2 font-display text-[15px] font-semibold text-ink-900 mb-2.5">
+        <span className="w-4 h-[3px] shrink-0 rounded-full bg-brand-500 translate-y-[-3px]" />
+        {label}
+      </p>
+      {children}
     </div>
   )
 }

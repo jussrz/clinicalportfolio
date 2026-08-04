@@ -1,15 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useCaseStats } from '../lib/useCaseStats'
 import { formatLongDate } from '../lib/date'
-import { departments } from '../data/departments'
+import { departments, HOME_HERO_IMAGE } from '../data/departments'
+import { GROUP_NAME, SCHOOL_NAME } from '../data/group'
 import ConfidentialityNotice from '../components/ConfidentialityNotice'
 import StatTile from '../components/StatTile'
 import PageHero from '../components/PageHero'
 import Reveal from '../components/Reveal'
 import { Section } from '../components/ui'
-
-// Free-to-use Unsplash License photo (no attribution required).
-const HERO_IMAGE = 'https://images.unsplash.com/photo-1758691462268-fbe66c4f3e28?fm=jpg&q=70&w=2000&auto=format&fit=crop'
 
 const purposeItems = [
   'Document our clinical exposure and learning experiences.',
@@ -28,14 +26,14 @@ export default function Home() {
       <PageHero
         size="xl"
         eyebrow="Clinical Rotation Portfolio"
-        image={HERO_IMAGE}
+        image={HOME_HERO_IMAGE}
         title={
           <>
-            Clinical Rotation Portfolio of <em className="font-display italic text-brand-200">5A and 5B</em>
+            Clinical Rotation Portfolio of <em className="font-display italic text-brand-200">{GROUP_NAME}</em>
           </>
         }
       >
-        <p className="mt-4 text-[15px] text-brand-100/90">University of Southern Mindanao – College of Medicine</p>
+        <p className="mt-4 text-[15px] text-brand-100/90">{SCHOOL_NAME}</p>
       </PageHero>
 
       {stats.status === 'ready' && (stats.totalCases > 0 || stats.totalReflections > 0) && (

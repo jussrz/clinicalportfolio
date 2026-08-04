@@ -197,10 +197,17 @@ body {
 }
 
 @media print {
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   .no-print {
     display: none !important;
   }
   main {
     margin-left: 0 !important;
+  }
+  .page-hero-tall {
+    min-height: auto !important;
   }
 }

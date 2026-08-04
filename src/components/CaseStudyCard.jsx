@@ -9,7 +9,7 @@ export default function CaseStudyCard({ reflection, caseEntry }) {
 
   return (
     <Link
-      to={`/case-studies/${reflection.id}`}
+      to={`/case-reflections/${reflection.id}`}
       className="group block h-full rounded-2xl border border-ink-200/70 bg-white card-shadow card-shadow-hover p-5 sm:p-6"
     >
       {caseEntry?.department && (
@@ -22,7 +22,7 @@ export default function CaseStudyCard({ reflection, caseEntry }) {
       {reflection.brief_summary && (
         <p className="text-sm text-ink-600 mt-3 leading-relaxed line-clamp-3">{reflection.brief_summary}</p>
       )}
-      <p className="mt-4 text-sm font-medium text-brand-700 group-hover:text-brand-800">Read case study →</p>
+      <p className="mt-4 text-sm font-medium text-brand-700 group-hover:text-brand-800">Read case study</p>
     </Link>
   )
 }

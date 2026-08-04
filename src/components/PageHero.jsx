@@ -17,7 +17,7 @@ export default function PageHero({ eyebrow, title, description, image, actions, 
   const tall = size === 'xl'
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl mb-6 shadow-lg shadow-brand-900/15 ${pad} ${tall ? 'min-h-[58vh] sm:min-h-[64vh] flex flex-col justify-end' : ''}`}>
+    <div className={`page-hero relative overflow-hidden rounded-2xl mb-6 shadow-lg shadow-brand-900/15 ${pad} ${tall ? 'page-hero-tall min-h-[58vh] sm:min-h-[64vh] flex flex-col justify-end' : ''}`}>
       {image ? (
         <>
           <img src={image} alt="" aria-hidden="true" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
