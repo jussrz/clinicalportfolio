@@ -53,20 +53,20 @@ export default function CaseLogTable({ rows, title, selectionMap }) {
   return (
     <>
       <Section variant="showcase" title={title ?? `Full Case Log (${rows.length} ${rows.length === 1 ? 'entry' : 'entries'})`}>
-        <Table minWidth="1180px">
+        <Table minWidth={selectionMap ? '920px' : '860px'} className="table-fixed">
           <thead>
             <tr>
-              <th>No.</th>
-              <th>Date Seen</th>
-              <th>Department</th>
-              <th>Clinical Area</th>
-              <th>Patient Code</th>
-              <th>Age/Sex</th>
-              <th>Chief Complaint</th>
-              <th>Working Diagnosis</th>
-              <th>Student Role</th>
-              <th>Student Assigned</th>
-              {selectionMap && <th>Reflection</th>}
+              <th className="w-8">No.</th>
+              <th className="w-20">Date Seen</th>
+              <th className="w-24">Department</th>
+              <th className="w-20">Clinical Area</th>
+              <th className="w-20">Patient Code</th>
+              <th className="w-14">Age/Sex</th>
+              <th className="w-28">Chief Complaint</th>
+              <th className="w-28">Working Diagnosis</th>
+              <th className="w-24">Student Role</th>
+              <th className="w-28">Student Assigned</th>
+              {selectionMap && <th className="w-16">Reflection</th>}
             </tr>
           </thead>
           <tbody>
@@ -80,14 +80,14 @@ export default function CaseLogTable({ rows, title, selectionMap }) {
                 >
                   <td className="text-ink-400">{i + 1}</td>
                   <td className="whitespace-nowrap">{row.date_seen || '—'}</td>
-                  <td>{row.department || '—'}</td>
-                  <td>{row.clinical_area || '—'}</td>
-                  <td>{row.patient_code || '—'}</td>
+                  <td className="break-words">{row.department || '—'}</td>
+                  <td className="break-words">{row.clinical_area || '—'}</td>
+                  <td className="break-words">{row.patient_code || '—'}</td>
                   <td>{row.age_sex || '—'}</td>
-                  <td>{row.chief_complaint || '—'}</td>
-                  <td>{row.working_diagnosis || '—'}</td>
-                  <td>{roleLabel(row) || '—'}</td>
-                  <td>{row.student_assigned ? studentFullName(row.student_assigned) : '—'}</td>
+                  <td className="break-words">{row.chief_complaint || '—'}</td>
+                  <td className="break-words">{row.working_diagnosis || '—'}</td>
+                  <td className="break-words">{roleLabel(row) || '—'}</td>
+                  <td className="break-words">{row.student_assigned ? studentFullName(row.student_assigned) : '—'}</td>
                   {selectionMap && (
                     <td className="whitespace-nowrap">
                       {reflectionId ? (
