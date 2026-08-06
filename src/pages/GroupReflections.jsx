@@ -1,38 +1,54 @@
 import { useState } from 'react'
-import { EditBar, LoadState, PageActions, Section } from '../components/ui'
+import { Button, LoadState } from '../components/ui'
 import PageHero from '../components/PageHero'
-import Reveal from '../components/Reveal'
-import PromptGroup from '../components/PromptGroup'
-import { useSupabaseRecord } from '../lib/useSupabaseRecord'
-import { useEditableFields } from '../lib/useEditableFields'
+import { DepartmentReflectionCard, hasDeptReflection } from '../components/DepartmentReflectionCard'
+import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { exportPromptsPdf } from '../lib/pdf'
+import { supabase } from '../lib/supabase'
+import { departments } from '../data/departments'
+import { GROUP_REFLECTION_PROMPTS } from '../data/groupReflectionPrompts'
 import { GROUP_NAME } from '../data/group'
 
-const prompts = [
-  { key: 'meaningful_experience', label: 'What was our most meaningful clinical learning experience?', feature: true },
-  { key: 'patients_caregivers', label: 'What did we learn about working with patients and caregivers?' },
-  { key: 'healthcare_team', label: 'What did we learn about working with the healthcare team?' },
-  { key: 'workflows', label: 'What did we learn about hospital or community health workflows?' },
-  { key: 'clinical_reasoning', label: 'What clinical reasoning skills improved in our group?' },
-  { key: 'challenges', label: 'What challenged us as a group?' },
-  { key: 'task_management', label: 'How did we manage group tasks and responsibilities?' },
-  { key: 'improvements', label: 'What should we improve before clerkship?' },
-]
-const numberedPrompts = prompts.map((p, i) => ({ ...p, label: `${i + 1}. ${p.label}` }))
+// One combined PDF, department by department (only departments with at
+// least one answer are included) — same "skip unanswered" behavior as the
+// Individual Contribution student reflection export.
+async function exportGroupReflectionsPdf(reflections) {
+  const answeredDepartments = departments.filter((dept) =>
+    hasDeptReflection(reflections.find((r) => r.department === dept.slug), GROUP_REFLECTION_PROMPTS)
+  )
+
+  const prompts = answeredDepartments.flatMap((dept) => {
+    const reflection = reflections.find((r) => r.department === dept.slug)
+    return GROUP_REFLECTION_PROMPTS.map(([key, label]) => ({
+      label: `${dept.name} — ${label}`,
+      value: reflection[key],
+    }))
+  })
+
+  await exportPromptsPdf({
+    title: `${GROUP_NAME} Group Reflections`,
+    prompts: prompts.length > 0 ? prompts : [{ label: 'No department reflections recorded yet.', value: '' }],
+    filename: 'group_reflections.pdf',
+  })
+}
 
 export default function GroupReflections() {
-  const { record, status, saveState, setField, flush } = useSupabaseRecord('group_reflections', 1)
-  const { editing, draft, start, cancel, set, save, saving } = useEditableFields(record, setField, flush)
+  const { rows, status, error, refetch } = useSupabaseTable('group_reflections', { orderBy: 'department', ascending: true })
+  const [openDept, setOpenDept] = useState(null)
   const [exporting, setExporting] = useState(false)
+
+  async function handleSaveReflection(department, patch) {
+    const { error } = await supabase
+      .from('group_reflections')
+      .upsert({ department, ...patch }, { onConflict: 'department' })
+    if (!error) await refetch()
+    return { error }
+  }
 
   async function handleExport() {
     setExporting(true)
     try {
-      await exportPromptsPdf({
-        title: `${GROUP_NAME} Group Reflections`,
-        prompts: prompts.map((p) => ({ label: p.label, value: record[p.key] })), // exportPromptsPdf numbers these itself
-        filename: 'group_reflections.pdf',
-      })
+      await exportGroupReflectionsPdf(rows)
     } finally {
       setExporting(false)
     }
@@ -44,20 +60,30 @@ export default function GroupReflections() {
         size="compact"
         eyebrow="Group Reflections"
         title="Group Reflections"
-        description="Structured reflections across the rotation, answered by the group as a whole."
-        actions={<PageActions editing={editing} onEdit={start} onExport={handleExport} exporting={exporting} />}
+        description="Structured reflections across the rotation, answered by the group per department."
+        actions={
+          <Button variant="outline" onClick={handleExport} disabled={exporting}>
+            {exporting ? 'Preparing PDF…' : 'Export to PDF'}
+          </Button>
+        }
       />
 
-      <Reveal>
-        <Section variant="showcase">
-          <LoadState status={status} error="Couldn't load this page's data.">
-            <div className="space-y-8">
-              <PromptGroup prompts={numberedPrompts} values={editing ? draft : record} editing={editing} onChange={set} />
-              <EditBar editing={editing} onCancel={cancel} onSave={save} saving={saving} saveState={saveState} />
-            </div>
-          </LoadState>
-        </Section>
-      </Reveal>
+      <LoadState status={status} error={error}>
+        <div className="space-y-2">
+          {departments.map((dept) => (
+            <DepartmentReflectionCard
+              key={dept.slug}
+              dept={dept}
+              reflection={rows.find((r) => r.department === dept.slug)}
+              prompts={GROUP_REFLECTION_PROMPTS}
+              editable
+              open={openDept === dept.slug}
+              onToggle={() => setOpenDept(openDept === dept.slug ? null : dept.slug)}
+              onSave={handleSaveReflection}
+            />
+          ))}
+        </div>
+      </LoadState>
     </div>
   )
 }

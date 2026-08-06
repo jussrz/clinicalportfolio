@@ -234,7 +234,7 @@ function CaseLogDetailModal({ entry, onSave, onDelete, onClose, onExport, export
 
 export default function CaseLogCensus() {
   const { record, status: metaStatus, saveState, setField } = useSupabaseRecord('group_metadata', 1)
-  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
+  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_log_entries', { orderBy: 'created_at', ascending: true })
   const stats = useCaseStats()
   const [addOpen, setAddOpen] = useState(false)
   const [newEntry, setNewEntry] = useState(emptyEntry)

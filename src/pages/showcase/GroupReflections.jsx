@@ -1,29 +1,22 @@
+import { useState } from 'react'
 import PageHero from '../../components/PageHero'
-import { LoadState, Section } from '../../components/ui'
-import ShowcaseAnswer from '../../components/ShowcaseAnswer'
-import { useSupabaseRecord } from '../../lib/useSupabaseRecord'
-
-const groupPrompts = [
-  { key: 'meaningful_experience', label: 'Our most meaningful clinical learning experience', feature: true },
-  { key: 'patients_caregivers', label: 'What we learned about working with patients and caregivers' },
-  { key: 'healthcare_team', label: 'What we learned about working with the healthcare team' },
-  { key: 'workflows', label: 'What we learned about hospital or community health workflows' },
-  { key: 'clinical_reasoning', label: 'How our clinical reasoning skills improved' },
-  { key: 'challenges', label: 'What challenged us as a group' },
-  { key: 'task_management', label: 'How we managed group tasks and responsibilities' },
-  { key: 'improvements', label: 'What we should improve before clerkship' },
-]
+import { LoadState } from '../../components/ui'
+import { DepartmentReflectionCard, hasAnyReflection } from '../../components/DepartmentReflectionCard'
+import { useSupabaseTable } from '../../lib/useSupabaseTable'
+import { departments } from '../../data/departments'
+import { GROUP_REFLECTION_PROMPTS } from '../../data/groupReflectionPrompts'
 
 export default function GroupReflections() {
-  const { record, status, error } = useSupabaseRecord('group_reflections', 1)
-  const hasContent = status === 'ready' && groupPrompts.some((p) => record[p.key])
+  const { rows, status, error } = useSupabaseTable('group_reflections', { orderBy: 'department', ascending: true })
+  const hasContent = status === 'ready' && hasAnyReflection(rows, GROUP_REFLECTION_PROMPTS)
+  const [openDept, setOpenDept] = useState(null)
 
   return (
     <div>
       <PageHero
         eyebrow="Group Reflections"
         title="Group Reflections"
-        description="Structured reflections across the whole rotation."
+        description="Structured reflections across the rotation, by department."
       />
 
       <LoadState status={status} error={error}>
@@ -32,13 +25,19 @@ export default function GroupReflections() {
             Group reflections will appear here once the group starts adding them.
           </p>
         ) : (
-          <Section variant="showcase">
-            <div className="space-y-7">
-              {groupPrompts.map((p) => (
-                <ShowcaseAnswer key={p.key} label={p.label} value={record[p.key]} feature={p.feature} />
-              ))}
-            </div>
-          </Section>
+          <div className="space-y-2">
+            {departments.map((dept) => (
+              <DepartmentReflectionCard
+                key={dept.slug}
+                dept={dept}
+                reflection={rows.find((r) => r.department === dept.slug)}
+                prompts={GROUP_REFLECTION_PROMPTS}
+                editable={false}
+                open={openDept === dept.slug}
+                onToggle={() => setOpenDept(openDept === dept.slug ? null : dept.slug)}
+              />
+            ))}
+          </div>
         )}
       </LoadState>
     </div>

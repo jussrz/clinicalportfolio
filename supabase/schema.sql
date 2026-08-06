@@ -141,9 +141,11 @@ alter table case_reflections add column if not exists group_improvements text no
 -- individual_contributions — one row per roster student. The cases they
 -- contributed to aren't stored here — they're read live off case_log_entries
 -- via student_assigned (matched against this row's student_name), same
--- single-source-of-truth pattern as case_reflections above. The
--- year_level_section/common_cases/skills_observed/lesson_learned/
--- area_to_improve columns back the "Add Reflection" Student Reflection form.
+-- single-source-of-truth pattern as case_reflections above. Reflection
+-- answers themselves live in individual_contribution_reflections below, one
+-- row per (student, department) since a student's reflection differs by
+-- rotation; year_level_section stays here since it doesn't vary by
+-- department.
 -- ---------------------------------------------------------------------
 create table if not exists individual_contributions (
   id uuid primary key default gen_random_uuid(),
@@ -152,12 +154,36 @@ create table if not exists individual_contributions (
 );
 
 alter table individual_contributions drop column if exists contribution_summary;
+alter table individual_contributions drop column if exists common_cases;
+alter table individual_contributions drop column if exists skills_observed;
+alter table individual_contributions drop column if exists lesson_learned;
+alter table individual_contributions drop column if exists area_to_improve;
 alter table individual_contributions add column if not exists year_level_section text not null default '';
-alter table individual_contributions add column if not exists common_cases text not null default '';
-alter table individual_contributions add column if not exists skills_observed text not null default '';
-alter table individual_contributions add column if not exists lesson_learned text not null default '';
-alter table individual_contributions add column if not exists area_to_improve text not null default '';
 alter table individual_contributions add column if not exists photo_url text;
+
+-- ---------------------------------------------------------------------
+-- individual_contribution_reflections — one row per (student, department):
+-- the "Student Reflection" form's four prompts, answered separately for
+-- each department a student rotates through. department is a slug matching
+-- src/data/departments.js (pediatrics, internal-medicine,
+-- obstetrics-gynecology, family-community-medicine, surgery).
+-- ---------------------------------------------------------------------
+create table if not exists individual_contribution_reflections (
+  id uuid primary key default gen_random_uuid(),
+  contribution_id uuid not null references individual_contributions(id) on delete cascade,
+  department text not null,
+  common_cases text not null default '',
+  skills_observed text not null default '',
+  lesson_learned text not null default '',
+  area_to_improve text not null default '',
+  updated_at timestamptz not null default now(),
+  unique (contribution_id, department)
+);
+
+drop trigger if exists trg_individual_contribution_reflections_updated_at on individual_contribution_reflections;
+create trigger trg_individual_contribution_reflections_updated_at
+  before update on individual_contribution_reflections
+  for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
 -- avatars storage bucket — public bucket for profile photos, referenced by
@@ -254,10 +280,30 @@ create trigger trg_feedback_action_plan_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- group_reflections — single row, one column per prompt.
+-- group_reflections — one row per department: the group answers these
+-- eight prompts separately for each department, since the group's members
+-- rotate through departments at different times. department is a slug
+-- matching src/data/departments.js (pediatrics, internal-medicine,
+-- obstetrics-gynecology, family-community-medicine, surgery). Replaces the
+-- old single-row-per-group shape.
 -- ---------------------------------------------------------------------
+-- One-time migration guard: only drop the old single-row shape (id was an
+-- int, not the uuid this new shape uses) so re-running this script after
+-- the migration doesn't wipe department rows on every run.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'group_reflections'
+      and column_name = 'id' and data_type = 'integer'
+  ) then
+    drop table group_reflections;
+  end if;
+end $$;
+
 create table if not exists group_reflections (
-  id int primary key default 1,
+  id uuid primary key default gen_random_uuid(),
+  department text not null,
   meaningful_experience text not null default '',
   patients_caregivers text not null default '',
   healthcare_team text not null default '',
@@ -267,9 +313,8 @@ create table if not exists group_reflections (
   task_management text not null default '',
   improvements text not null default '',
   updated_at timestamptz not null default now(),
-  constraint group_reflections_single_row check (id = 1)
+  unique (department)
 );
-insert into group_reflections (id) values (1) on conflict (id) do nothing;
 
 drop trigger if exists trg_group_reflections_updated_at on group_reflections;
 create trigger trg_group_reflections_updated_at
@@ -314,7 +359,8 @@ declare
 begin
   foreach t in array array[
     'group_metadata', 'case_log_entries', 'case_reflections',
-    'individual_contributions', 'department_notes', 'case_presentation',
+    'individual_contributions', 'individual_contribution_reflections',
+    'department_notes', 'case_presentation',
     'clinical_skills', 'feedback_action_plan', 'group_reflections',
     'rotation_overview'
   ]
@@ -340,6 +386,8 @@ end $$;
 alter table case_log_entries replica identity full;
 alter table case_reflections replica identity full;
 alter table individual_contributions replica identity full;
+alter table individual_contribution_reflections replica identity full;
+alter table group_reflections replica identity full;
 alter table department_notes replica identity full;
 alter table group_metadata replica identity full;
 
@@ -352,6 +400,7 @@ declare
 begin
   foreach t in array array[
     'case_log_entries', 'case_reflections', 'individual_contributions',
+    'individual_contribution_reflections', 'group_reflections',
     'department_notes', 'group_metadata'
   ]
   loop
