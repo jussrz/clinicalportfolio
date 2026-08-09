@@ -40,7 +40,7 @@ function SelectCaseRow({ entry, index, onSelect }) {
 }
 
 export default function CaseReflections() {
-  const { rows: caseLogRows, status: caseLogStatus, error: caseLogError } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
+  const { rows: caseLogRows, status: caseLogStatus, error: caseLogError } = useSupabaseTable('case_log_entries', { orderBy: 'created_at', ascending: true })
   const { rows: reflections, status, error, update, remove, insert } = useSupabaseTable('case_reflections', { orderBy: 'reflection_no', ascending: true })
   const [justSelectedEntryId, setJustSelectedEntryId] = useState(null)
 

@@ -1,25 +1,11 @@
-import { useMemo } from 'react'
 import PageHero from '../../components/PageHero'
 import Reveal from '../../components/Reveal'
 import CaseStudyCard from '../../components/CaseStudyCard'
-import CaseLogTable from '../../components/CaseLogTable'
 import { LoadState } from '../../components/ui'
 import { useCaseStudies } from '../../lib/useCaseStudies'
-import { useSupabaseTable } from '../../lib/useSupabaseTable'
 
 export default function CaseReflections() {
   const { caseStudies, status, error } = useCaseStudies()
-  const { rows: caseLog, status: caseLogStatus } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
-
-  // case_log_entry id -> reflection id, so the full log table below can link
-  // straight from a logged case to its Selected Case Reflection, if it has one.
-  const selectionMap = useMemo(
-    () =>
-      Object.fromEntries(
-        caseStudies.filter((cs) => cs.caseEntry).map((cs) => [cs.caseEntry.id, cs.reflection.id])
-      ),
-    [caseStudies]
-  )
 
   return (
     <div>
@@ -44,10 +30,6 @@ export default function CaseReflections() {
           </div>
         )}
       </LoadState>
-
-      {caseLogStatus === 'ready' && caseLog.length > 0 && (
-        <CaseLogTable rows={caseLog} selectionMap={selectionMap} />
-      )}
     </div>
   )
 }

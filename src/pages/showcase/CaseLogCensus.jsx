@@ -1,5 +1,6 @@
 import PageHero from '../../components/PageHero'
 import CaseLogTable from '../../components/CaseLogTable'
+import SignedCopiesSection from '../../components/SignedCopiesSection'
 import { LoadState } from '../../components/ui'
 import { useSupabaseTable } from '../../lib/useSupabaseTable'
 
@@ -7,7 +8,7 @@ export default function CaseLogCensus() {
   const { rows: caseLog, status, error } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHero
         eyebrow="Group Case Log Census"
         title="Group Case Log Census"
@@ -23,6 +24,8 @@ export default function CaseLogCensus() {
           <CaseLogTable rows={caseLog} />
         )}
       </LoadState>
+
+      <SignedCopiesSection />
     </div>
   )
 }

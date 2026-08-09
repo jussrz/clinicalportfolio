@@ -180,6 +180,27 @@ drop policy if exists "avatars anon delete" on storage.objects;
 create policy "avatars anon delete" on storage.objects for delete using (bucket_id = 'avatars');
 
 -- ---------------------------------------------------------------------
+-- signed-case-logs storage bucket — public bucket for scanned copies of the
+-- faculty/preceptor-signed Case Log Census PDF (hand-signed after export,
+-- then scanned and uploaded here). No table needed — storage.objects.list()
+-- already gives filename/size/created_at, same as avatars. Public read (the
+-- portfolio is a public showcase); anon can insert/update/delete, same soft
+-- trust model as every other table/bucket above (not real auth).
+-- ---------------------------------------------------------------------
+insert into storage.buckets (id, name, public)
+values ('signed-case-logs', 'signed-case-logs', true)
+on conflict (id) do nothing;
+
+drop policy if exists "signed-case-logs public read" on storage.objects;
+create policy "signed-case-logs public read" on storage.objects for select using (bucket_id = 'signed-case-logs');
+drop policy if exists "signed-case-logs anon insert" on storage.objects;
+create policy "signed-case-logs anon insert" on storage.objects for insert with check (bucket_id = 'signed-case-logs');
+drop policy if exists "signed-case-logs anon update" on storage.objects;
+create policy "signed-case-logs anon update" on storage.objects for update using (bucket_id = 'signed-case-logs') with check (bucket_id = 'signed-case-logs');
+drop policy if exists "signed-case-logs anon delete" on storage.objects;
+create policy "signed-case-logs anon delete" on storage.objects for delete using (bucket_id = 'signed-case-logs');
+
+-- ---------------------------------------------------------------------
 -- department_notes — keyed by department + section, one row per section.
 -- Departments: pediatrics, family-community-medicine, internal-medicine,
 -- surgery, obstetrics-gynecology (slugs match src/data/departments.js).
@@ -200,81 +221,19 @@ create trigger trg_department_notes_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- case_presentation — single row.
+-- case_presentation, clinical_skills, feedback_action_plan,
+-- group_reflections — formerly single shared rows, now answered
+-- separately per department and stored in department_notes instead (same
+-- table DepartmentPage.jsx's own objectives/conditions/etc. fields use),
+-- under prompt keys namespaced per page (e.g. 'case_presentation.qna_questions')
+-- so they don't collide with each other or with DepartmentPage's own
+-- section keys. Drop the old singleton tables — safe, nothing worth
+-- preserving was stored in them.
 -- ---------------------------------------------------------------------
-create table if not exists case_presentation (
-  id int primary key default 1,
-  qna_questions text not null default '',
-  strong_parts text not null default '',
-  needs_improvement text not null default '',
-  corrections_learned text not null default '',
-  next_improvements text not null default '',
-  updated_at timestamptz not null default now(),
-  constraint case_presentation_single_row check (id = 1)
-);
-insert into case_presentation (id) values (1) on conflict (id) do nothing;
-
-drop trigger if exists trg_case_presentation_updated_at on case_presentation;
-create trigger trg_case_presentation_updated_at
-  before update on case_presentation
-  for each row execute function set_updated_at();
-
--- ---------------------------------------------------------------------
--- clinical_skills — single row.
--- ---------------------------------------------------------------------
-create table if not exists clinical_skills (
-  id int primary key default 1,
-  confident_skills text not null default '',
-  skills_to_practice text not null default '',
-  improvement_plan text not null default '',
-  updated_at timestamptz not null default now(),
-  constraint clinical_skills_single_row check (id = 1)
-);
-insert into clinical_skills (id) values (1) on conflict (id) do nothing;
-
-drop trigger if exists trg_clinical_skills_updated_at on clinical_skills;
-create trigger trg_clinical_skills_updated_at
-  before update on clinical_skills
-  for each row execute function set_updated_at();
-
--- ---------------------------------------------------------------------
--- feedback_action_plan — single row.
--- ---------------------------------------------------------------------
-create table if not exists feedback_action_plan (
-  id int primary key default 1,
-  reflection text not null default '',
-  updated_at timestamptz not null default now(),
-  constraint feedback_action_plan_single_row check (id = 1)
-);
-insert into feedback_action_plan (id) values (1) on conflict (id) do nothing;
-
-drop trigger if exists trg_feedback_action_plan_updated_at on feedback_action_plan;
-create trigger trg_feedback_action_plan_updated_at
-  before update on feedback_action_plan
-  for each row execute function set_updated_at();
-
--- ---------------------------------------------------------------------
--- group_reflections — single row, one column per prompt.
--- ---------------------------------------------------------------------
-create table if not exists group_reflections (
-  id int primary key default 1,
-  meaningful_experience text not null default '',
-  patients_caregivers text not null default '',
-  healthcare_team text not null default '',
-  workflows text not null default '',
-  clinical_reasoning text not null default '',
-  challenges text not null default '',
-  task_management text not null default '',
-  improvements text not null default '',
-  updated_at timestamptz not null default now(),
-  constraint group_reflections_single_row check (id = 1)
-);
-insert into group_reflections (id) values (1) on conflict (id) do nothing;
-
-drop trigger if exists trg_group_reflections_updated_at on group_reflections;
-create trigger trg_group_reflections_updated_at
-  before update on group_reflections
-  for each row execute function set_updated_at();
+drop table if exists case_presentation cascade;
+drop table if exists clinical_skills cascade;
+drop table if exists feedback_action_plan cascade;
+drop table if exists group_reflections cascade;
 
 -- ---------------------------------------------------------------------
 -- rotation_overview — single row. Objectives/schedule/topics/goals set by
@@ -314,9 +273,7 @@ declare
 begin
   foreach t in array array[
     'group_metadata', 'case_log_entries', 'case_reflections',
-    'individual_contributions', 'department_notes', 'case_presentation',
-    'clinical_skills', 'feedback_action_plan', 'group_reflections',
-    'rotation_overview'
+    'individual_contributions', 'department_notes', 'rotation_overview'
   ]
   loop
     execute format('alter table %I enable row level security', t);

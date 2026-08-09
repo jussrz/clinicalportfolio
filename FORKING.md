@@ -24,12 +24,15 @@ time you forked them.
 
 2. **Create a new Supabase project**, then run
    [`supabase/schema.sql`](supabase/schema.sql) in its SQL Editor. The
-   script self-seeds everything it needs — the `group_metadata` row, every
-   other singleton row (`case_presentation`, `clinical_skills`,
-   `feedback_action_plan`, `group_reflections`, `rotation_overview`), and
-   the `case_reflections_no_seq` sequence all get created by the script's
-   own `insert ... on conflict do nothing` lines. There is no separate
-   seed step.
+   script self-seeds everything it needs — the `group_metadata` row, the
+   `rotation_overview` singleton row, and the `case_reflections_no_seq`
+   sequence all get created by the script's own `insert ... on conflict do
+   nothing` lines. There is no separate seed step. (Case Presentation,
+   Clinical Skills, Feedback & Action Plan, and Group Reflections aren't
+   singleton rows — like Individual Contribution, they're answered
+   separately per department/student and stored as rows in
+   `department_notes`/`individual_contributions`, populated from the app
+   itself rather than seeded by the script.)
 
 3. **Copy `.env.example` to `.env.local`** and fill in the new project's
    `VITE_SUPABASE_URL` and publishable/anon key (never the service_role

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Section, Notice, Field, FieldRow, SelectField, Button, IconClose, IconPlus, LoadState, Modal, SaveStatus, Table, Th } from '../components/ui'
 import PageHero from '../components/PageHero'
 import BarBreakdown from '../components/BarBreakdown'
+import SignedCopiesSection from '../components/SignedCopiesSection'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { useCaseStats } from '../lib/useCaseStats'
@@ -31,6 +32,18 @@ const emptyEntry = {
 // before every insert/update.
 function normalizeEntry(entry) {
   return { ...entry, date_seen: entry.date_seen || null }
+}
+
+// All fields are required before a case entry can be added — student_role_detail
+// is the one exception, only required when Student Role is 'Assisted in ___'.
+const REQUIRED_ENTRY_FIELDS = [
+  'date_seen', 'department', 'clinical_area', 'patient_code', 'age_sex',
+  'chief_complaint', 'working_diagnosis', 'student_role', 'student_assigned',
+]
+function isEntryComplete(entry) {
+  if (!REQUIRED_ENTRY_FIELDS.every((key) => String(entry[key] ?? '').trim())) return false
+  if (entry.student_role === 'Assisted in ___' && !String(entry.student_role_detail ?? '').trim()) return false
+  return true
 }
 
 function CaseLogFields({ values, onChange }) {
@@ -234,7 +247,7 @@ function CaseLogDetailModal({ entry, onSave, onDelete, onClose, onExport, export
 
 export default function CaseLogCensus() {
   const { record, status: metaStatus, saveState, setField } = useSupabaseRecord('group_metadata', 1)
-  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_log_entries', { orderBy: 'date_seen', ascending: false })
+  const { rows, status, error, insert, update, remove } = useSupabaseTable('case_log_entries', { orderBy: 'created_at', ascending: true })
   const stats = useCaseStats()
   const [addOpen, setAddOpen] = useState(false)
   const [newEntry, setNewEntry] = useState(emptyEntry)
@@ -276,12 +289,16 @@ export default function CaseLogCensus() {
   }
 
   async function handleAdd() {
+    if (!isEntryComplete(newEntry)) {
+      setAddError('Fill in all fields before adding this case entry.')
+      return
+    }
     setAdding(true)
     setAddError(null)
     const { error: insertError } = await insert(normalizeEntry(newEntry))
     setAdding(false)
     if (insertError) {
-      setAddError(insertError.message)
+      setAddError(`Failed to save: ${insertError.message}`)
       return
     }
     setNewEntry(emptyEntry)
@@ -401,7 +418,10 @@ export default function CaseLogCensus() {
                       )}
                     </div>
                     <p className="text-xs text-ink-400">
-                      Faculty/Preceptor Signature and Date are signed by hand on the exported PDF, not entered here.
+                      Faculty/Preceptor Signature and Date are signed by hand on the exported PDF, not entered here.{' '}
+                      <a href="#signed-copies" className="text-brand-700 hover:text-brand-800 font-medium">
+                        Click here to view scanned copies
+                      </a>
                     </p>
                     <div className="h-4"><SaveStatus state={saveState} /></div>
                   </div>
@@ -410,8 +430,8 @@ export default function CaseLogCensus() {
                 <div className="border-t border-ink-100 pt-6">
                   <p className="text-sm font-semibold text-ink-900 mb-3">Case Entry</p>
                   <CaseLogFields values={newEntry} onChange={setNewEntry} />
-                  {addError && <p className="text-sm text-red-600 mt-3">Failed to save: {addError}</p>}
-                  <Button className="mt-4" onClick={handleAdd} disabled={adding}>
+                  {addError && <p className="text-sm text-red-600 mt-3">{addError}</p>}
+                  <Button className="mt-4" onClick={handleAdd} disabled={adding || !isEntryComplete(newEntry)}>
                     <IconPlus /> {adding ? 'Adding…' : 'Add Entry'}
                   </Button>
                 </div>
@@ -423,6 +443,8 @@ export default function CaseLogCensus() {
             <IconPlus /> Add Case Entry
           </Button>
         )}
+
+        <SignedCopiesSection editable />
       </div>
 
       <CaseLogDetailModal
