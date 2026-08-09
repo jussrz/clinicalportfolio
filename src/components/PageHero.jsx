@@ -39,7 +39,7 @@ export default function PageHero({ eyebrow, title, description, image, actions, 
             'radial-gradient(480px 240px at 88% -10%, rgba(255,255,255,0.12), transparent 60%), radial-gradient(360px 220px at 4% 120%, rgba(255,255,255,0.08), transparent 60%)',
         }}
       />
-      <div className="relative flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+      <div className={`relative flex flex-wrap justify-between gap-x-4 gap-y-3 ${tall ? 'items-end' : 'items-start'}`}>
         <div className="min-w-0">
           {eyebrow && (
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 mb-3">

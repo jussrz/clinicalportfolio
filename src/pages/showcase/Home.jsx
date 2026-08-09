@@ -4,17 +4,12 @@ import { departments, HOME_HERO_IMAGE } from '../../data/departments'
 import PageHero from '../../components/PageHero'
 import Reveal from '../../components/Reveal'
 import { Section } from '../../components/ui'
-
-const purposeItems = [
-  'Document our clinical exposure and learning experiences.',
-  'Record important cases encountered during rotations.',
-  'Reflect on our strengths, challenges, and areas for improvement.',
-  'Demonstrate the development of our clinical reasoning and professional skills.',
-  'Promote collaborative learning through shared reflections and discussions.',
-  'Monitor our progress toward achieving the objectives of each clinical rotation.',
-]
+import { useSupabaseRecord } from '../../lib/useSupabaseRecord'
 
 export default function Home() {
+  const { record } = useSupabaseRecord('home_content', 1)
+  const purposeItems = (record.purpose_items || '').split('\n').filter(Boolean)
+
   return (
     <div>
       <PageHero
@@ -57,33 +52,18 @@ export default function Home() {
       <div className="space-y-6 mb-10">
         <Reveal>
           <Section variant="showcase" className="space-y-4">
-            <p className="text-[16px] leading-relaxed text-ink-700">
-              This portfolio documents our learning journey throughout our clinical rotations as
-              junior medical students. It showcases our clinical experiences, patient encounters,
-              case discussions, reflections, and the knowledge and skills we developed across
-              different departments, including Internal Medicine, Surgery, Pediatrics, Obstetrics
-              and Gynecology, and Family and Community Medicine.
-            </p>
-            <p className="text-[16px] leading-relaxed text-ink-700">
-              As a team, we are committed to lifelong learning, professionalism, ethical patient
-              care, teamwork, and evidence-based clinical practice. Through this portfolio, we aim
-              to demonstrate our growth in clinical reasoning, communication, and patient-centered
-              care while preparing for the responsibilities of clerkship and future medical
-              practice.
-            </p>
+            <p className="text-[16px] leading-relaxed text-ink-700 whitespace-pre-line">{record.intro_1}</p>
+            <p className="text-[16px] leading-relaxed text-ink-700 whitespace-pre-line">{record.intro_2}</p>
           </Section>
         </Reveal>
 
         <Reveal>
           <Section variant="showcase" title="Purpose of the Portfolio">
-            <p className="text-[15px] leading-relaxed text-ink-500 mb-6">
-              This online portfolio serves as a comprehensive record of our clinical education and
-              experiences during the rotation. It is designed to:
-            </p>
+            <p className="text-[15px] leading-relaxed text-ink-500 mb-6 whitespace-pre-line">{record.purpose_intro}</p>
             <ul className="grid sm:grid-cols-2 gap-3">
               {purposeItems.map((item, i) => (
                 <li
-                  key={item}
+                  key={i}
                   className="flex gap-3 rounded-xl border border-ink-100 bg-brand-50/40 p-3.5 text-sm leading-relaxed text-ink-700"
                 >
                   <span className="shrink-0 grid place-items-center w-6 h-6 rounded-full bg-brand-600 text-white text-xs font-semibold">
@@ -93,10 +73,7 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-            <p className="text-[15px] leading-relaxed text-ink-700 mt-6">
-              We hope this portfolio reflects not only the knowledge we have gained but also our
-              commitment to compassionate, ethical, and patient-centered medical practice.
-            </p>
+            <p className="text-[15px] leading-relaxed text-ink-700 mt-6 whitespace-pre-line">{record.purpose_closing}</p>
           </Section>
         </Reveal>
       </div>

@@ -290,6 +290,33 @@ create trigger trg_rotation_overview_updated_at
   for each row execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
+-- home_content — single row. The editable body text on the portfolio's
+-- Home page (intro blurb + "Purpose of the Portfolio" section). Hero
+-- title/department cards stay code-driven (data/group.js, data/departments.js).
+-- ---------------------------------------------------------------------
+create table if not exists home_content (
+  id int primary key default 1,
+  intro_1 text not null default 'This portfolio documents our learning journey throughout our clinical rotations as junior medical students. It showcases our clinical experiences, patient encounters, case discussions, reflections, and the knowledge and skills we developed across different departments, including Internal Medicine, Surgery, Pediatrics, Obstetrics and Gynecology, and Family and Community Medicine.',
+  intro_2 text not null default 'As a team, we are committed to lifelong learning, professionalism, ethical patient care, teamwork, and evidence-based clinical practice. Through this portfolio, we aim to demonstrate our growth in clinical reasoning, communication, and patient-centered care while preparing for the responsibilities of clerkship and future medical practice.',
+  purpose_intro text not null default 'This online portfolio serves as a comprehensive record of our clinical education and experiences during the rotation. It is designed to:',
+  purpose_items text not null default 'Document our clinical exposure and learning experiences.
+Record important cases encountered during rotations.
+Reflect on our strengths, challenges, and areas for improvement.
+Demonstrate the development of our clinical reasoning and professional skills.
+Promote collaborative learning through shared reflections and discussions.
+Monitor our progress toward achieving the objectives of each clinical rotation.',
+  purpose_closing text not null default 'We hope this portfolio reflects not only the knowledge we have gained but also our commitment to compassionate, ethical, and patient-centered medical practice.',
+  updated_at timestamptz not null default now(),
+  constraint home_content_single_row check (id = 1)
+);
+insert into home_content (id) values (1) on conflict (id) do nothing;
+
+drop trigger if exists trg_home_content_updated_at on home_content;
+create trigger trg_home_content_updated_at
+  before update on home_content
+  for each row execute function set_updated_at();
+
+-- ---------------------------------------------------------------------
 -- Row Level Security — open read/write for anon (small trusted group,
 -- per the brief). Every table gets the same four permissive policies.
 -- ---------------------------------------------------------------------
@@ -300,7 +327,7 @@ begin
   foreach t in array array[
     'group_metadata', 'case_log_entries', 'case_reflections',
     'individual_contributions', 'individual_contribution_reflections',
-    'department_notes', 'rotation_overview'
+    'department_notes', 'rotation_overview', 'home_content'
   ]
   loop
     execute format('alter table %I enable row level security', t);
