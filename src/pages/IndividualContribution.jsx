@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Field, IconPencil, IconTrash, LoadState, SelectField } from '../components/ui'
+import { Button, Field, IconPencil, LoadState } from '../components/ui'
 import PageHero from '../components/PageHero'
 import { DepartmentReflectionCard, REFLECTION_PROMPTS, hasAnyReflection, hasDeptReflection } from '../components/DepartmentReflectionCard'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
@@ -11,7 +11,7 @@ import { underlinedField } from '../lib/pdf'
 import { formatDateRange } from '../lib/date'
 import { supabase } from '../lib/supabase'
 import { departments } from '../data/departments'
-import { GROUP_MEMBERS, SCHOOL_NAME_SHORT, ROTATION_LABEL, studentFullName } from '../data/group'
+import { SCHOOL_NAME_SHORT, ROTATION_LABEL, studentFullName } from '../data/group'
 
 // Same soft, identity-label-only gating as the rest of the app (see
 // useCurrentMember.js) — not real access control, just keeps a member from
@@ -190,12 +190,8 @@ function StudentReflectionSection({ row, groupInfo, reflections, canEdit, openDe
   )
 }
 
-function ContributionRow({ row, groupInfo, reflections, onUpdate, onDelete, onSaveReflection, canEdit }) {
-  const [editingName, setEditingName] = useState(false)
-  const [nameDraft, setNameDraft] = useState(row.student_name)
+function ContributionRow({ row, groupInfo, reflections, onUpdate, onSaveReflection, canEdit }) {
   const [openDept, setOpenDept] = useState(null)
-  const [savingName, setSavingName] = useState(false)
-  const [nameError, setNameError] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState(null)
@@ -219,18 +215,6 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onDelete, onSa
     if (updateError) setPhotoError(updateError.message)
   }
 
-  async function handleSaveName() {
-    setSavingName(true)
-    setNameError(null)
-    const { error } = await onUpdate(row.id, { student_name: nameDraft })
-    setSavingName(false)
-    if (error) {
-      setNameError(error.message)
-      return
-    }
-    setEditingName(false)
-  }
-
   async function handleExport() {
     setExporting(true)
     try {
@@ -238,28 +222,6 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onDelete, onSa
     } finally {
       setExporting(false)
     }
-  }
-
-  function handleDelete() {
-    if (window.confirm(`Remove ${row.student_name ? studentFullName(row.student_name) : 'this student'} from the contributions list?`)) {
-      onDelete(row.id)
-    }
-  }
-
-  if (editingName) {
-    return (
-      <div className="bg-white border border-ink-200 rounded-2xl shadow-sm p-5 sm:p-7 space-y-4">
-        <SelectField label="Student" value={nameDraft} onChange={(e) => setNameDraft(e.target.value)}>
-          <option value="" disabled>Select student</option>
-          {GROUP_MEMBERS.map((m) => <option key={m} value={m}>{studentFullName(m)}</option>)}
-        </SelectField>
-        {nameError && <p className="text-sm text-red-600">Failed to save: {nameError}</p>}
-        <div className="flex gap-2">
-          <Button onClick={handleSaveName} disabled={savingName}>{savingName ? 'Saving…' : 'Save'}</Button>
-          <Button variant="outline" onClick={() => { setNameDraft(row.student_name); setEditingName(false) }}>Cancel</Button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -285,18 +247,10 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onDelete, onSa
             {row.student_name ? studentFullName(row.student_name) : 'Unnamed student'}
           </p>
         </div>
-        {canEdit && (
+        {canEdit && answered && (
           <div className="flex items-center gap-1 shrink-0">
-            {answered && (
-              <button type="button" onClick={handleExport} disabled={exporting} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
-                {exporting ? 'Exporting…' : 'Export PDF'}
-              </button>
-            )}
-            <button type="button" onClick={() => { setNameDraft(row.student_name); setEditingName(true) }} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
-              Edit
-            </button>
-            <button type="button" onClick={handleDelete} aria-label="Remove student" className="w-7 h-7 grid place-items-center rounded-lg text-ink-300 hover:text-red-600 hover:bg-red-50 transition-colors">
-              <IconTrash />
+            <button type="button" onClick={handleExport} disabled={exporting} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
+              {exporting ? 'Exporting…' : 'Export PDF'}
             </button>
           </div>
         )}
@@ -323,7 +277,7 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onDelete, onSa
 }
 
 export default function IndividualContribution() {
-  const { rows, status, error, update, remove } = useSupabaseTable('individual_contributions', { orderBy: 'student_name', ascending: true })
+  const { rows, status, error, update } = useSupabaseTable('individual_contributions', { orderBy: 'student_name', ascending: true })
   const { rows: reflectionRows, refetch: refetchReflections } = useSupabaseTable('individual_contribution_reflections', { orderBy: 'department', ascending: true })
   const { record: groupInfo } = useSupabaseRecord('group_metadata', 1)
   const { member } = useCurrentMember()
@@ -377,7 +331,6 @@ export default function IndividualContribution() {
                 groupInfo={groupInfo}
                 reflections={reflectionRows.filter((r) => r.contribution_id === row.id)}
                 onUpdate={update}
-                onDelete={remove}
                 onSaveReflection={handleSaveReflection}
                 canEdit={isOwnRow(row, member)}
               />
