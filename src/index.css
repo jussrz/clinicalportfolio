@@ -134,9 +134,7 @@ body {
   letter-spacing: 0.04em;
   color: var(--color-ink-600);
   padding: 0.75rem 0.875rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
   border-bottom: 1px solid var(--color-ink-200);
 }
 

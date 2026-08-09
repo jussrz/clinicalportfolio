@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Area, Button, Field, IconPencil, IconTrash, LoadState, SelectField } from '../components/ui'
+import { Button, Field, IconPencil, IconTrash, LoadState, SelectField } from '../components/ui'
 import PageHero from '../components/PageHero'
+import { DepartmentReflectionCard, REFLECTION_PROMPTS, hasAnyReflection, hasDeptReflection } from '../components/DepartmentReflectionCard'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
 import { useSupabaseRecord } from '../lib/useSupabaseRecord'
 import { useCurrentMember } from '../lib/useCurrentMember'
@@ -8,14 +9,9 @@ import { useIndividualCases } from '../lib/useIndividualCases'
 import { initials, uploadAvatar } from '../lib/avatar'
 import { underlinedField } from '../lib/pdf'
 import { formatDateRange } from '../lib/date'
+import { supabase } from '../lib/supabase'
+import { departments } from '../data/departments'
 import { GROUP_MEMBERS, SCHOOL_NAME_SHORT, ROTATION_LABEL, studentFullName } from '../data/group'
-
-const REFLECTION_PROMPTS = [
-  ['common_cases', 'Most common cases/conditions encountered'],
-  ['skills_observed', 'Skills I was able to observe or practice'],
-  ['lesson_learned', 'One clinical lesson I learned from this rotation'],
-  ['area_to_improve', 'One area I need to improve before clerkship'],
-]
 
 // Same soft, identity-label-only gating as the rest of the app (see
 // useCurrentMember.js) — not real access control, just keeps a member from
@@ -25,20 +21,25 @@ function isOwnRow(row, member) {
   return row.student_name.trim().toLowerCase() === member.trim().toLowerCase()
 }
 
-function hasReflection(row) {
-  return Boolean(row.year_level_section || row.common_cases || row.skills_observed || row.lesson_learned || row.area_to_improve)
-}
-
 // One-page "STUDENT REFLECTION" form per student, matching the paper
-// template this replaces: letterhead, underlined header fields, then the
-// four reflection questions in full.
-async function exportStudentReflectionPdf(row, groupInfo) {
+// template this replaces: letterhead, underlined header fields, then each
+// department's four reflection questions in full (only departments with an
+// answer are included).
+async function exportStudentReflectionPdf(row, groupInfo, reflections) {
   const { jsPDF } = await import('jspdf')
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
   const marginX = 54
   const maxWidth = pageWidth - marginX * 2
   let y = 56
+
+  function ensureRoom(next) {
+    if (y + next > pageHeight - 56) {
+      doc.addPage()
+      y = 56
+    }
+  }
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
@@ -63,17 +64,39 @@ async function exportStudentReflectionPdf(row, groupInfo) {
   underlinedField(doc, 'Inclusive Dates:', formatDateRange(groupInfo.inclusive_date_start, groupInfo.inclusive_date_end), marginX, y, 320)
   y += 36
 
-  REFLECTION_PROMPTS.forEach(([key, label]) => {
+  const answeredDepartments = departments
+    .map((dept) => ({ dept, reflection: reflections.find((r) => r.department === dept.slug) }))
+    .filter(({ reflection }) => hasDeptReflection(reflection))
+
+  answeredDepartments.forEach(({ dept, reflection }) => {
+    ensureRoom(30)
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10.5)
-    doc.text(`${label}:`, marginX, y)
-    y += 16
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    const lines = doc.splitTextToSize(row[key] || '—', maxWidth)
-    doc.text(lines, marginX, y)
-    y += lines.length * 14 + 24
+    doc.setFontSize(11.5)
+    doc.text(dept.name, marginX, y)
+    y += 18
+
+    REFLECTION_PROMPTS.forEach(([key, label]) => {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(10.5)
+      const labelLines = doc.splitTextToSize(`${label}:`, maxWidth)
+      ensureRoom(labelLines.length * 14 + 14)
+      doc.text(labelLines, marginX, y)
+      y += labelLines.length * 14
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(10)
+      const lines = doc.splitTextToSize(reflection[key] || '—', maxWidth)
+      ensureRoom(lines.length * 14 + 10)
+      doc.text(lines, marginX, y)
+      y += lines.length * 14 + 14
+    })
+    y += 12
   })
+
+  if (answeredDepartments.length === 0) {
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(10)
+    doc.text('No department reflections recorded yet.', marginX, y)
+  }
 
   doc.save(`${(row.student_name || 'student').toLowerCase()}_reflection.pdf`)
 }
@@ -99,83 +122,85 @@ function CasesLoggedList({ studentName }) {
   )
 }
 
-function ReflectionReadout({ row }) {
-  return (
-    <div className="space-y-3 pt-4 mt-4 border-t border-ink-100">
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">Student Reflection</p>
-      {row.year_level_section && (
-        <p className="text-sm text-ink-700"><span className="font-semibold">Year Level / Section:</span> {row.year_level_section}</p>
-      )}
-      {REFLECTION_PROMPTS.map(([key, label]) => row[key] && (
-        <div key={key}>
-          <p className="text-sm font-semibold text-ink-800">{label}</p>
-          <p className="text-sm text-ink-600 whitespace-pre-line mt-0.5">{row[key]}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function ReflectionForm({ row, groupInfo, onSave, onCancel }) {
-  const [draft, setDraft] = useState({
-    year_level_section: row.year_level_section || '',
-    common_cases: row.common_cases || '',
-    skills_observed: row.skills_observed || '',
-    lesson_learned: row.lesson_learned || '',
-    area_to_improve: row.area_to_improve || '',
-  })
+/** Year Level / Section doesn't vary by department, so it lives on the
+ * student's own row and saves independently of any department card. */
+function YearLevelField({ row, onUpdate }) {
+  const [value, setValue] = useState(row.year_level_section || '')
   const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState(null)
+  const [error, setError] = useState(null)
+  const dirty = value !== (row.year_level_section || '')
 
   async function handleSave() {
     setSaving(true)
-    setSaveError(null)
-    const { error } = await onSave(draft)
+    setError(null)
+    const { error } = await onUpdate(row.id, { year_level_section: value })
     setSaving(false)
-    if (error) {
-      setSaveError(error.message)
-      return
-    }
-    onCancel()
+    if (error) setError(error.message)
   }
 
   return (
+    <div>
+      <Field label="Year Level / Section" value={value} onChange={(e) => setValue(e.target.value)} />
+      {dirty && (
+        <div className="flex items-center gap-2 mt-2">
+          <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          {error && <p className="text-sm text-red-600">Failed to save: {error}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StudentReflectionSection({ row, groupInfo, reflections, canEdit, openDept, setOpenDept, onSaveReflection, onUpdate }) {
+  return (
     <div className="space-y-4 pt-4 mt-4 border-t border-ink-100">
       <p className="text-sm font-semibold text-ink-900">Student Reflection</p>
-      <div className="text-sm text-ink-500 space-y-0.5">
-        <p><span className="font-semibold text-ink-700">Name of Student:</span> {studentFullName(row.student_name)}</p>
-        <p><span className="font-semibold text-ink-700">Group:</span> {groupInfo.group_name || '—'}</p>
-        <p><span className="font-semibold text-ink-700">Rotation Block:</span> {groupInfo.rotation_block || '—'}</p>
-        <p><span className="font-semibold text-ink-700">Inclusive Dates:</span> {formatDateRange(groupInfo.inclusive_date_start, groupInfo.inclusive_date_end) || '—'}</p>
-      </div>
-      <Field label="Year Level / Section" value={draft.year_level_section} onChange={(e) => setDraft({ ...draft, year_level_section: e.target.value })} />
-      {REFLECTION_PROMPTS.map(([key, label]) => (
-        <Area
-          key={key}
-          label={label}
-          value={draft[key]}
-          onChange={(e) => setDraft({ ...draft, [key]: e.target.value })}
-          minRows={2}
-        />
-      ))}
-      {saveError && <p className="text-sm text-red-600">Failed to save: {saveError}</p>}
-      <div className="flex gap-2">
-        <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Reflection'}</Button>
-        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+      {canEdit && (
+        <div className="text-sm text-ink-500 space-y-0.5">
+          <p><span className="font-semibold text-ink-700">Name of Student:</span> {studentFullName(row.student_name)}</p>
+          <p><span className="font-semibold text-ink-700">Group:</span> {groupInfo.group_name || '—'}</p>
+          <p><span className="font-semibold text-ink-700">Rotation Block:</span> {groupInfo.rotation_block || '—'}</p>
+          <p><span className="font-semibold text-ink-700">Inclusive Dates:</span> {formatDateRange(groupInfo.inclusive_date_start, groupInfo.inclusive_date_end) || '—'}</p>
+        </div>
+      )}
+      {canEdit ? (
+        <YearLevelField row={row} onUpdate={onUpdate} />
+      ) : (
+        row.year_level_section && (
+          <p className="text-sm text-ink-700"><span className="font-semibold">Year Level / Section:</span> {row.year_level_section}</p>
+        )
+      )}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-ink-400 mb-2">Reflection by Department</p>
+        <div className="space-y-2">
+          {departments.map((dept) => (
+            <DepartmentReflectionCard
+              key={dept.slug}
+              dept={dept}
+              reflection={reflections.find((r) => r.department === dept.slug)}
+              editable={canEdit}
+              open={openDept === dept.slug}
+              onToggle={() => setOpenDept(openDept === dept.slug ? null : dept.slug)}
+              onSave={(department, patch) => onSaveReflection(row.id, department, patch)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function ContributionRow({ row, groupInfo, onUpdate, onDelete, canEdit }) {
+function ContributionRow({ row, groupInfo, reflections, onUpdate, onDelete, onSaveReflection, canEdit }) {
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(row.student_name)
-  const [reflecting, setReflecting] = useState(false)
+  const [openDept, setOpenDept] = useState(null)
   const [savingName, setSavingName] = useState(false)
   const [nameError, setNameError] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState(null)
+
+  const answered = hasAnyReflection(reflections)
 
   async function handlePhotoChange(e) {
     const file = e.target.files?.[0]
@@ -209,7 +234,7 @@ function ContributionRow({ row, groupInfo, onUpdate, onDelete, canEdit }) {
   async function handleExport() {
     setExporting(true)
     try {
-      await exportStudentReflectionPdf(row, groupInfo)
+      await exportStudentReflectionPdf(row, groupInfo, reflections)
     } finally {
       setExporting(false)
     }
@@ -262,10 +287,7 @@ function ContributionRow({ row, groupInfo, onUpdate, onDelete, canEdit }) {
         </div>
         {canEdit && (
           <div className="flex items-center gap-1 shrink-0">
-            <button type="button" onClick={() => setReflecting((v) => !v)} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
-              {hasReflection(row) ? 'Edit Reflection' : 'Add Reflection'}
-            </button>
-            {hasReflection(row) && (
+            {answered && (
               <button type="button" onClick={handleExport} disabled={exporting} className="text-xs font-medium text-brand-700 hover:text-brand-800 px-2 py-1">
                 {exporting ? 'Exporting…' : 'Export PDF'}
               </button>
@@ -286,17 +308,23 @@ function ContributionRow({ row, groupInfo, onUpdate, onDelete, canEdit }) {
         <CasesLoggedList studentName={row.student_name} />
       </div>
 
-      {reflecting ? (
-        <ReflectionForm row={row} groupInfo={groupInfo} onSave={(patch) => onUpdate(row.id, patch)} onCancel={() => setReflecting(false)} />
-      ) : (
-        hasReflection(row) && <ReflectionReadout row={row} />
-      )}
+      <StudentReflectionSection
+        row={row}
+        groupInfo={groupInfo}
+        reflections={reflections}
+        canEdit={canEdit}
+        openDept={openDept}
+        setOpenDept={setOpenDept}
+        onSaveReflection={onSaveReflection}
+        onUpdate={onUpdate}
+      />
     </div>
   )
 }
 
 export default function IndividualContribution() {
   const { rows, status, error, update, remove } = useSupabaseTable('individual_contributions', { orderBy: 'student_name', ascending: true })
+  const { rows: reflectionRows, refetch: refetchReflections } = useSupabaseTable('individual_contribution_reflections', { orderBy: 'department', ascending: true })
   const { record: groupInfo } = useSupabaseRecord('group_metadata', 1)
   const { member } = useCurrentMember()
   const [exporting, setExporting] = useState(false)
@@ -305,12 +333,21 @@ export default function IndividualContribution() {
   // the per-row "Export PDF" action, just reachable from the page header
   // without hunting for your card.
   const ownRow = rows.find((row) => isOwnRow(row, member))
+  const ownReflections = reflectionRows.filter((r) => r.contribution_id === ownRow?.id)
+
+  async function handleSaveReflection(contributionId, department, patch) {
+    const { error } = await supabase
+      .from('individual_contribution_reflections')
+      .upsert({ contribution_id: contributionId, department, ...patch }, { onConflict: 'contribution_id,department' })
+    if (!error) await refetchReflections()
+    return { error }
+  }
 
   async function handleExport() {
     if (!ownRow) return
     setExporting(true)
     try {
-      await exportStudentReflectionPdf(ownRow, groupInfo)
+      await exportStudentReflectionPdf(ownRow, groupInfo, ownReflections)
     } finally {
       setExporting(false)
     }
@@ -334,7 +371,16 @@ export default function IndividualContribution() {
         <LoadState status={status} error={error}>
           <div className="space-y-4">
             {rows.map((row) => (
-              <ContributionRow key={row.id} row={row} groupInfo={groupInfo} onUpdate={update} onDelete={remove} canEdit={isOwnRow(row, member)} />
+              <ContributionRow
+                key={row.id}
+                row={row}
+                groupInfo={groupInfo}
+                reflections={reflectionRows.filter((r) => r.contribution_id === row.id)}
+                onUpdate={update}
+                onDelete={remove}
+                onSaveReflection={handleSaveReflection}
+                canEdit={isOwnRow(row, member)}
+              />
             ))}
             {rows.length === 0 && (
               <div className="text-center py-10 border border-dashed border-ink-300 rounded-2xl">

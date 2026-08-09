@@ -1,18 +1,14 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import CaseLogTable from '../../components/CaseLogTable'
 import { Icon } from '../../components/Icon'
 import { LoadState, Notice } from '../../components/ui'
+import { DepartmentReflectionCard } from '../../components/DepartmentReflectionCard'
 import { useSupabaseTable } from '../../lib/useSupabaseTable'
 import { useIndividualCases } from '../../lib/useIndividualCases'
 import { initials } from '../../lib/avatar'
+import { departments } from '../../data/departments'
 import { studentFullName } from '../../data/group'
-
-const REFLECTION_PROMPTS = [
-  ['common_cases', 'Most common cases/conditions encountered'],
-  ['skills_observed', 'Skills I was able to observe or practice'],
-  ['lesson_learned', 'One clinical lesson I learned from this rotation'],
-  ['area_to_improve', 'One area I need to improve before clerkship'],
-]
 
 /** Top-left back navigation, above the page's own title — same placement
  * convention as the Case Study detail page's BackLink. */
@@ -61,10 +57,11 @@ function ProfileHero({ name, subtitle, photoUrl }) {
 export default function IndividualContributionDetail() {
   const { id } = useParams()
   const { rows, status, error } = useSupabaseTable('individual_contributions', { orderBy: 'created_at', ascending: true })
+  const { rows: reflectionRows, status: reflectionsStatus } = useSupabaseTable('individual_contribution_reflections', { orderBy: 'department', ascending: true })
+  const [openDept, setOpenDept] = useState(null)
   const row = rows.find((r) => r.id === id)
   const { cases } = useIndividualCases(row?.student_name)
-
-  const hasReflection = row && (row.year_level_section || REFLECTION_PROMPTS.some(([key]) => row[key]))
+  const reflections = row ? reflectionRows.filter((r) => r.contribution_id === row.id) : []
 
   return (
     <div>
@@ -89,17 +86,25 @@ export default function IndividualContributionDetail() {
                 <p className="text-sm text-ink-400 italic">No cases logged for this student yet.</p>
               )}
 
-              {hasReflection && (
-                <div className="rounded-2xl border border-ink-200/70 bg-white card-shadow p-5 sm:p-6 space-y-5">
-                  <p className="font-display text-base font-semibold text-ink-900">Student Reflection</p>
-                  {REFLECTION_PROMPTS.map(([key, label]) => row[key] && (
-                    <div key={key}>
-                      <p className="text-sm font-semibold text-ink-800">{label}</p>
-                      <p className="text-sm text-ink-600 whitespace-pre-line mt-0.5 break-words">{row[key]}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="rounded-2xl border border-ink-200/70 bg-white card-shadow p-5 sm:p-6 space-y-4">
+                <p className="font-display text-base font-semibold text-ink-900">Student Reflection</p>
+                {reflectionsStatus === 'loading' ? (
+                  <p className="text-sm text-ink-400 animate-pulse">Loading…</p>
+                ) : (
+                  <div className="space-y-2">
+                    {departments.map((dept) => (
+                      <DepartmentReflectionCard
+                        key={dept.slug}
+                        dept={dept}
+                        reflection={reflections.find((r) => r.department === dept.slug)}
+                        editable={false}
+                        open={openDept === dept.slug}
+                        onToggle={() => setOpenDept(openDept === dept.slug ? null : dept.slug)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </>
         )}
