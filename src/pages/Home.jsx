@@ -82,7 +82,7 @@ export default function Home() {
         <LoadState status={status} error="Couldn't load this page's content.">
           <div className="space-y-6">
             <Reveal>
-              <Section variant="showcase" className="space-y-4">
+              <Section variant="showcase" title="About This Portfolio" className="space-y-4">
                 {editing ? (
                   <>
                     <Area label="Intro paragraph 1" value={draft.intro_1 ?? ''} onChange={(e) => set('intro_1', e.target.value)} minRows={3} />

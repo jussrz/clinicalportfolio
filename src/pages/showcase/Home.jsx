@@ -51,7 +51,7 @@ export default function Home() {
 
       <div className="space-y-6 mb-10">
         <Reveal>
-          <Section variant="showcase" className="space-y-4">
+          <Section variant="showcase" title="About This Portfolio" className="space-y-4">
             <p className="text-[16px] leading-relaxed text-ink-700 whitespace-pre-line">{record.intro_1}</p>
             <p className="text-[16px] leading-relaxed text-ink-700 whitespace-pre-line">{record.intro_2}</p>
           </Section>
