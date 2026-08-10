@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Field, IconPencil, LoadState } from '../components/ui'
+import { Button, Field, IconClose, IconPencil, LoadState } from '../components/ui'
 import PageHero from '../components/PageHero'
 import { DepartmentReflectionCard, REFLECTION_PROMPTS, hasAnyReflection, hasDeptReflection } from '../components/DepartmentReflectionCard'
 import { useSupabaseTable } from '../lib/useSupabaseTable'
@@ -194,6 +194,7 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onSaveReflecti
   const [openDept, setOpenDept] = useState(null)
   const [exporting, setExporting] = useState(false)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [removingPhoto, setRemovingPhoto] = useState(false)
   const [photoError, setPhotoError] = useState(null)
 
   const answered = hasAnyReflection(reflections)
@@ -215,6 +216,14 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onSaveReflecti
     if (updateError) setPhotoError(updateError.message)
   }
 
+  async function handleRemovePhoto() {
+    setRemovingPhoto(true)
+    setPhotoError(null)
+    const { error } = await onUpdate(row.id, { photo_url: null })
+    setRemovingPhoto(false)
+    if (error) setPhotoError(error.message)
+  }
+
   async function handleExport() {
     setExporting(true)
     try {
@@ -230,16 +239,27 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onSaveReflecti
         <div className="flex items-center gap-3 min-w-0">
           <div className="relative shrink-0">
             {row.photo_url ? (
-              <img src={row.photo_url} alt="" className="w-11 h-11 rounded-full object-cover" />
+              <img src={row.photo_url} alt="" className="w-11 h-11 rounded-full object-cover ring-1 ring-ink-200/70" />
             ) : (
               <div className="w-11 h-11 grid place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-display font-semibold">
                 {initials(row.student_name ? studentFullName(row.student_name) : '?')}
               </div>
             )}
+            {canEdit && row.photo_url && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                disabled={uploadingPhoto || removingPhoto}
+                aria-label="Remove photo"
+                className="absolute -top-1.5 -right-1.5 w-[18px] h-[18px] grid place-items-center rounded-full bg-white border border-ink-200 text-ink-300 hover:text-white hover:bg-red-500 hover:border-red-500 transition-colors shadow-sm disabled:opacity-50"
+              >
+                <IconClose className="w-2.5 h-2.5" strokeWidth={2.5} />
+              </button>
+            )}
             {canEdit && (
               <label className="absolute -bottom-1 -right-1 w-5 h-5 grid place-items-center rounded-full bg-white border border-ink-200 text-ink-500 hover:text-brand-700 cursor-pointer shadow-sm">
                 <IconPencil className="w-3 h-3" />
-                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto} />
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} disabled={uploadingPhoto || removingPhoto} />
               </label>
             )}
           </div>
@@ -256,7 +276,8 @@ function ContributionRow({ row, groupInfo, reflections, onUpdate, onSaveReflecti
         )}
       </div>
       {uploadingPhoto && <p className="text-xs text-ink-400 mt-2">Uploading photo…</p>}
-      {photoError && <p className="text-xs text-red-600 mt-2">Failed to upload photo: {photoError}</p>}
+      {removingPhoto && <p className="text-xs text-ink-400 mt-2">Removing photo…</p>}
+      {photoError && <p className="text-xs text-red-600 mt-2">Failed to update photo: {photoError}</p>}
 
       <div className="mt-3">
         <CasesLoggedList studentName={row.student_name} />
